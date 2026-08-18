@@ -1,0 +1,531 @@
+/* ============ Space Rescue — angle defence game ============ */
+
+#game {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+}
+
+/* --- HUD banner --- */
+#hud {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 18px 22px 0;
+}
+
+#prompt {
+  flex: 1;
+  margin: 0;
+  padding: 0.7em 1.1em;
+  border-radius: 14px;
+  background: rgba(233, 238, 255, 0.94);
+  color: #2b3fd1;
+  font-size: clamp(0.95rem, 1.9vw, 1.25rem);
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(5, 8, 30, 0.35);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+#prompt.good { background: rgba(224, 250, 227, 0.95); color: #157a3d; }
+#prompt.bad  { background: rgba(255, 228, 226, 0.95); color: #c22a20; }
+
+#hud-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0.55em 1em;
+  border-radius: 14px;
+  background: rgba(233, 238, 255, 0.94);
+  color: #23307c;
+  font-weight: 700;
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  box-shadow: 0 6px 18px rgba(5, 8, 30, 0.35);
+}
+
+#lives { display: flex; gap: 5px; }
+
+#lives i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8fe4ff, #2b8fd6);
+  box-shadow: 0 0 6px rgba(90, 190, 255, 0.8);
+}
+
+#lives i.lost {
+  background: rgba(35, 48, 124, 0.25);
+  box-shadow: none;
+}
+
+/* --- Arena --- */
+#arena {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+#angle-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#meteor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(110px, 13vw, 190px);
+  z-index: 4;                /* rides in front of the cannon on a collision */
+  will-change: transform;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  filter: drop-shadow(0 0 18px rgba(255, 160, 60, 0.55));
+  visibility: hidden;
+}
+
+/* --- Cannon: dome base + pivoting barrel --- */
+#cannon {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  /* the dome art has ~7% transparent padding under its visible edge —
+     sink by that much so the dome sits flush on the answer bar */
+  transform: translateX(-50%) translateY(7%);
+  width: clamp(190px, 22vw, 300px);
+  pointer-events: none;
+}
+
+#cannon-base {
+  position: relative;
+  display: block;
+  width: 100%;
+  z-index: 2;
+}
+
+#cannon-barrel {
+  position: absolute;
+  left: 50%;
+  bottom: 2%;
+  width: 26%;
+  z-index: 3;   /* housing rides in front of the dome, as in the concept art */
+  /* pivot near the barrel's foot, at the dome's centre point */
+  transform-origin: 50% 90%;
+  transform: translateX(-50%) rotate(0deg);
+  transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+/* cannon bolt */
+.bolt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(120, 220, 255, 0), #baf1ff 55%, #ffffff);
+  box-shadow: 0 0 14px rgba(120, 220, 255, 0.9);
+  pointer-events: none;
+}
+
+/* meteor explosion: flash core + expanding ring */
+.burst {
+  position: absolute;
+  z-index: 5;
+  width: 24px;
+  height: 24px;
+  margin: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8dd 0%, #ffd45e 40%, rgba(255, 122, 40, 0.85) 70%, transparent 72%);
+  pointer-events: none;
+  animation: burst-pop 0.55s ease-out forwards;
+}
+
+.burst::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 205, 110, 0.9);
+  animation: burst-ring 0.55s ease-out forwards;
+}
+
+@keyframes burst-pop {
+  0%   { transform: scale(0.4); opacity: 1; }
+  70%  { transform: scale(4.2); opacity: 0.9; }
+  100% { transform: scale(5.2); opacity: 0; }
+}
+
+@keyframes burst-ring {
+  0%   { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+
+/* bigger, angrier variant for a cannon strike */
+.burst.big { animation-duration: 0.75s; }
+.burst.big::after { border-width: 6px; }
+
+/* glowing debris flung out of an explosion; --dx/--dy set per particle */
+.spark {
+  position: absolute;
+  z-index: 5;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff3c4, #ffb43d 60%, #ff7a28);
+  box-shadow: 0 0 8px rgba(255, 170, 60, 0.9);
+  pointer-events: none;
+  animation: spark-fly 0.8s cubic-bezier(0.15, 0.6, 0.4, 1) forwards;
+}
+
+@keyframes spark-fly {
+  0%   { transform: translate(0, 0) scale(1.1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0.25); opacity: 0; }
+}
+
+/* soft smoke puffs that drift up and thin out after a strike */
+.smoke {
+  position: absolute;
+  z-index: 5;
+  width: 80px;
+  height: 80px;
+  margin: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%,
+    rgba(225, 228, 240, 0.9) 0%, rgba(168, 172, 192, 0.65) 40%,
+    rgba(120, 124, 148, 0.35) 60%, transparent 74%);
+  pointer-events: none;
+  animation: smoke-rise 1.7s ease-out forwards;
+}
+
+@keyframes smoke-rise {
+  0%   { transform: translate(var(--dx), 10px) scale(0.35); opacity: 0; }
+  15%  { opacity: 0.95; }
+  100% { transform: translate(calc(var(--dx) * 2.4), -150px) scale(2.3); opacity: 0; }
+}
+
+/* --- Answer pad --- */
+#options {
+  display: flex;
+  gap: clamp(10px, 2vw, 26px);
+  justify-content: center;
+  padding: 16px clamp(12px, 4vw, 60px) 20px;
+  background: rgba(233, 238, 255, 0.10);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.opt-btn {
+  flex: 1;
+  max-width: 220px;
+  padding: 0.75em 0.5em;
+  cursor: pointer;
+  border: 3px solid #ffffff;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f6f9ff 0%, #dfe7fb 100%);
+  color: #23307c;
+  font-family: inherit;
+  font-size: clamp(1.05rem, 2.2vw, 1.5rem);
+  font-weight: 800;
+  box-shadow:
+    inset 0 -0.28em 0 rgba(105, 122, 190, 0.35),
+    0 8px 16px rgba(5, 8, 30, 0.4);
+  transition: transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.opt-btn:hover { transform: translateY(-2px); }
+.opt-btn:active { transform: translateY(2px); }
+.opt-btn:disabled { cursor: default; opacity: 0.85; }
+
+.opt-btn.right {
+  background: linear-gradient(180deg, #d9f7dd 0%, #a8e8b4 100%);
+  color: #14672f;
+  border-color: #eafff0;
+}
+
+.opt-btn.wrong {
+  background: linear-gradient(180deg, #ffd9d5 0%, #f5a9a2 100%);
+  color: #8f1f16;
+  border-color: #ffecea;
+}
+
+/* --- Damage feedback --- */
+#damage-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(circle at 50% 85%, rgba(255, 60, 40, 0.55), rgba(200, 20, 10, 0.28));
+  opacity: 0;
+  pointer-events: none;
+}
+
+#damage-flash.on { animation: dmg-flash 0.6s ease-out; }
+
+@keyframes dmg-flash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#game.shake { animation: game-shake 0.5s linear; }
+
+@keyframes game-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-14px, 6px); }
+  25% { transform: translate(12px, -8px); }
+  40% { transform: translate(-10px, -6px); }
+  55% { transform: translate(9px, 7px); }
+  70% { transform: translate(-6px, 3px); }
+  85% { transform: translate(4px, -3px); }
+}
+
+/* --- End-of-run overlay --- */
+#result {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  background: rgba(7, 10, 38, 0.82);
+  transition: opacity 0.4s ease;
+}
+
+#result.hide { opacity: 0; pointer-events: none; }
+
+#result h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  text-shadow: 0 4px 0 rgba(30, 38, 110, 0.8), 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+#result p {
+  margin: 0 0 1.2em;
+  color: #b9c5f5;
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  font-weight: 700;
+}
+
+#again-btn {
+  cursor: pointer;
+  padding: 0.8em 2.4em;
+  border: 5px solid #ffffff;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f8867e 0%, #ea5b53 100%);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  box-shadow:
+    inset 0 -0.4em 0 rgba(183, 55, 62, 0.55),
+    0 12px 24px rgba(8, 12, 36, 0.45);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#again-btn:active { transform: translateY(3px); }
+
+/* ============ Starting screen ============ */
+
+/* game layer stays hidden until the mission starts */
+body.pre-start #game {
+  display: none;
+}
+
+#start-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: url("../assets/1stScreen.png") center / cover no-repeat #1c1c54;
+  transition: opacity 0.7s ease;
+}
+
+#start-screen.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Space station over the horizon on the right, as in the reference art */
+#start-station {
+  position: absolute;
+  left: 78%;
+  bottom: 4vh;
+  transform: translateX(-50%);
+  width: clamp(340px, 38vw, 620px);
+  height: auto;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 14px 24px rgba(8, 12, 40, 0.45));
+  animation: station-drift 6s ease-in-out infinite;
+}
+
+@keyframes station-drift {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(-10px); }
+}
+
+.start-content {
+  position: absolute;
+  top: 15vh;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  text-align: center;
+}
+
+/* Cartoon two-line title: puffy 3D letters — white front, stacked pale
+   lavender extrusion, deep blue edge, soft glow (per reference) */
+.start-title {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  font-weight: 900;
+  line-height: 1.02;
+  color: #ffffff;
+  text-shadow:
+    0 2px 0 #dcdaf7,                        /* lavender underside, darkening */
+    0 3px 0 #c6c4ec,
+    0 4px 0 #adaee2,
+    0 5px 0 #9497d6,
+    0 6px 0 #7b80c9,
+    0 7px 0 #6369bb,
+    0 8px 0 #4d54ad,
+    0 10px 2px rgba(24, 30, 105, 0.9),      /* deep 3D edge */
+    0 16px 16px rgba(0, 0, 24, 0.65);       /* ambient shadow */
+}
+
+.title-space {
+  font-size: clamp(2.3rem, 6.8vw, 4.6rem);
+  letter-spacing: -0.03em;
+}
+
+.title-rescue {
+  font-size: clamp(2.9rem, 8.6vw, 5.8rem);
+  letter-spacing: -0.02em;
+}
+
+/* tagline sits on a glowing flare line: line — TEXT — line */
+.start-tagline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1em;
+  margin: 0.9em 0 0;
+  font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  font-size: clamp(0.85rem, 1.9vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #55d6ff;
+  text-shadow:
+    0 0 10px rgba(85, 214, 255, 0.9),
+    0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.start-tagline::before,
+.start-tagline::after {
+  content: "";
+  width: clamp(60px, 9vw, 130px);
+  height: 2px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(120, 220, 255, 0.9);
+}
+
+.start-tagline::before {
+  background: linear-gradient(90deg, transparent, #a5ecff);
+}
+
+.start-tagline::after {
+  background: linear-gradient(90deg, #a5ecff, transparent);
+}
+
+/* Start button: chunky cartoon pill — coral red body, thick white ring,
+   darker bottom lip for the 3D toy look, yellow accent ticks above corners */
+#start-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  cursor: pointer;
+  margin-top: 9vh;
+  padding: 0.85em 1.9em 1em;
+  min-width: clamp(190px, 21vw, 280px);
+  border: 6px solid #ffffff;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f8867e 0%, #f06c63 45%, #ea5b53 100%);
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  font-size: clamp(1.3rem, 2.8vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-shadow: 0 2px 0 rgba(178, 52, 48, 0.5);
+  box-shadow:
+    inset 0 -0.45em 0 rgba(183, 55, 62, 0.55),  /* darker bottom lip */
+    inset 0 0.3em 0.35em rgba(255, 255, 255, 0.3), /* top highlight */
+    0 0 0 2px rgba(20, 30, 70, 0.18),           /* soft outline past the ring */
+    0 12px 24px rgba(8, 12, 36, 0.45);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* white play triangle */
+#start-btn::before {
+  content: "";
+  width: 0.8em;
+  height: 0.95em;
+  background: #ffffff;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  filter: drop-shadow(0 2px 0 rgba(178, 52, 48, 0.5));
+}
+
+/* yellow emphasis ticks bursting above each corner */
+#start-btn::after {
+  content: "";
+  position: absolute;
+  top: -34px;
+  left: -24px;
+  right: -24px;
+  height: 34px;
+  background:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34'><g stroke='%23f7c948' stroke-width='6' stroke-linecap='round' fill='none'><line x1='20' y1='3' x2='20' y2='12'/><line x1='6' y1='9' x2='12' y2='16'/><line x1='34' y1='9' x2='28' y2='16'/></g></svg>") left top / 38px 32px no-repeat,
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34'><g stroke='%23f7c948' stroke-width='6' stroke-linecap='round' fill='none'><line x1='20' y1='3' x2='20' y2='12'/><line x1='6' y1='9' x2='12' y2='16'/><line x1='34' y1='9' x2='28' y2='16'/></g></svg>") right top / 38px 32px no-repeat;
+  pointer-events: none;
+}
+
+#start-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #fb928a 0%, #f3766d 45%, #ed655d 100%);
+  box-shadow:
+    inset 0 -0.45em 0 rgba(183, 55, 62, 0.55),
+    inset 0 0.3em 0.35em rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(20, 30, 70, 0.18),
+    0 16px 28px rgba(8, 12, 36, 0.5);
+}
+
+#start-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 -0.15em 0 rgba(183, 55, 62, 0.55),
+    inset 0 0.35em 0.5em rgba(140, 35, 32, 0.35),
+    0 0 0 2px rgba(20, 30, 70, 0.18),
+    0 6px 14px rgba(8, 12, 36, 0.45);
+}

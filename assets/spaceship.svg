@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#f2f5ff"/>
+      <stop offset="1" stop-color="#c3cbe6"/>
+    </linearGradient>
+    <linearGradient id="finG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8867e"/>
+      <stop offset="1" stop-color="#e04f47"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8fe4ff"/>
+      <stop offset="1" stop-color="#2b8fd6"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffd45e"/>
+      <stop offset="0.5" stop-color="#ff9b3d"/>
+      <stop offset="1" stop-color="#ff6a3d" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- exhaust plume trailing behind -->
+  <path d="M48 60 C30 44 14 50 0 60 C14 70 30 76 48 60 Z" fill="url(#flame)"/>
+
+  <!-- tail fins -->
+  <path d="M62 56 L36 30 C32 27 28 30 30 35 L44 60 Z" fill="url(#finG)"/>
+  <path d="M62 64 L36 90 C32 93 28 90 30 85 L44 60 Z" fill="url(#finG)"/>
+
+  <!-- main hull, nose to the right -->
+  <path d="M44 60 C44 44 66 30 104 30 C140 30 168 44 182 60
+           C168 76 140 90 104 90 C66 90 44 76 44 60 Z"
+        fill="url(#hull)" stroke="#aab3d1" stroke-width="2"/>
+
+  <!-- nose cone accent -->
+  <path d="M150 34 C166 42 176 52 182 60 C176 68 166 78 150 86
+           C160 76 165 68 165 60 C165 52 160 44 150 34 Z" fill="#f8867e"/>
+
+  <!-- cockpit window -->
+  <circle cx="108" cy="60" r="17" fill="#dfe6f7"/>
+  <circle cx="108" cy="60" r="13" fill="url(#glass)"/>
+  <path d="M100 53 C104 50 110 50 114 52 C108 53 103 56 100 53 Z" fill="#ffffff" opacity="0.75"/>
+
+  <!-- hull stripe + rivets -->
+  <path d="M60 62 C74 70 90 74 104 75" stroke="#c9d1e8" stroke-width="3"
+        stroke-linecap="round" fill="none"/>
+  <circle cx="70" cy="49" r="2.6" fill="#c9d1e8"/>
+  <circle cx="80" cy="45" r="2.6" fill="#c9d1e8"/>
+</svg>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Space Background</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#05030f; overflow:hidden; }
+  #space-bg { position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0; }
+</style>
+</head>
+<body>
+<canvas id="space-bg"></canvas>
+<script src="space-background.js"></script>
+<script>
+  SpaceBackground(document.getElementById('space-bg'), {
+    starCount: 420,
+    warmStarRatio: 0.28,
+    twinkle: true,
+    driftSpeed: 0.35,
+    shootingStars: true,
+    nebulaIntensity: 0.85
+  });
+</script>
+</body>
+</html>

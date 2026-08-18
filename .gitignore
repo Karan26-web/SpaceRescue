@@ -1,0 +1,18 @@
+# macOS junk
+.DS_Store
+**/.DS_Store
+
+# editors / IDEs
+.vscode/
+.idea/
+*.swp
+
+# dependencies (if a package.json is ever added)
+node_modules/
+package-lock.json
+
+# test artifacts & throwaway harness pages
+_*.html
+*.log
+test-results/
+playwright-report/

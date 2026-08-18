@@ -1,0 +1,17 @@
+/* Space background styling — full-viewport canvas behind all content */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0d1147;
+  overflow: hidden;
+}
+
+#space-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}

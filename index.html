@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Space Rescue</title>
+  <link rel="stylesheet" href="css/space.css">
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body class="pre-start">
+  <canvas id="space-bg"></canvas>
+
+  <!-- Starting screen: full-bleed cartoon backdrop, station + title + start -->
+  <div id="start-screen">
+    <img id="start-station" src="assets/spaceStation.png" alt="Space station orbiting above Earth">
+    <div class="start-content">
+      <h1 class="start-title">
+        <span class="title-space">SPACE</span>
+        <span class="title-rescue">RESCUE</span>
+      </h1>
+      <button type="button" id="start-btn">START</button>
+    </div>
+  </div>
+
+  <!-- ============ Angle defence game ============ -->
+  <div id="game">
+    <!-- top banner: prompt on the left, meteor counter + lives on the right -->
+    <div id="hud">
+      <p id="prompt">Read the protractor — which angle is the meteor coming in on?</p>
+      <div id="hud-stats">
+        <span id="round-label">Meteor 1 / 8</span>
+        <span id="lives" aria-label="Shields remaining"></span>
+      </div>
+    </div>
+
+    <!-- play area: protractor rays, meteor, cannon -->
+    <div id="arena">
+      <svg id="angle-svg" aria-hidden="true"></svg>
+      <img id="meteor" src="assets/meteor.png" alt="Incoming meteor">
+      <div id="cannon">
+        <img id="cannon-barrel" src="assets/Canon1.svg" alt="">
+        <img id="cannon-base" src="assets/Canon2.svg" alt="Cannon">
+      </div>
+    </div>
+
+    <!-- answer pad -->
+    <div id="options" role="group" aria-label="Angle choices"></div>
+
+    <!-- full-screen red wash when the cannon takes a hit -->
+    <div id="damage-flash" aria-hidden="true"></div>
+
+    <!-- end-of-run overlay -->
+    <div id="result" class="hide">
+      <h2 id="result-title">Mission complete</h2>
+      <p id="result-text"></p>
+      <button type="button" id="again-btn">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script src="export/space-background.js"></script>
+  <script src="js/space-init.js"></script>
+  <script src="js/sfx.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/start-screen.js"></script>
+</body>
+</html>
