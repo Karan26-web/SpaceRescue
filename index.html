@@ -30,6 +30,7 @@
       <div id="hud-stats">
         <span id="round-label">Meteor 1 / 8</span>
         <span id="lives" aria-label="Shields remaining"></span>
+        <button type="button" id="mute-btn" aria-label="Toggle sound">SOUND ON</button>
       </div>
     </div>
 
@@ -62,5 +63,25 @@
   <script src="js/sfx.js"></script>
   <script src="js/game.js"></script>
   <script src="js/start-screen.js"></script>
+  <script>
+    (function () {
+      const b = document.getElementById('mute-btn');
+      const slot = document.getElementById('hud-stats');
+      document.body.appendChild(b);
+      document.getElementById('start-btn').addEventListener('click', () => slot.appendChild(b));
+      window.addEventListener('keydown', function once(e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        window.removeEventListener('keydown', once);
+        slot.appendChild(b);
+      });
+      const paint = () => {
+        const m = SFX.isMuted();
+        b.textContent = m ? 'SOUND OFF' : 'SOUND ON';
+        b.classList.toggle('off', m);
+      };
+      b.addEventListener('click', () => { SFX.toggleMute(); paint(); });
+      paint();
+    })();
+  </script>
 </body>
 </html>

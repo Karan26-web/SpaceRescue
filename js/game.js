@@ -163,6 +163,7 @@
     meteorEl.style.transformOrigin = `${art.ox}% ${art.oy}%`;
     meteorEl.style.visibility = 'visible';
     renderMeteor();
+    SFX.approachStart(APPROACH_SECS);
     roundLabel.textContent = `Meteor ${round + 1} / ${QUESTIONS.length}`;
     setPrompt(INTROS[round % INTROS.length]);
     buildOptions();
@@ -180,11 +181,12 @@
      bearing intercepts the meteor, a wrong one streaks off into empty space */
   function answer(v, btn) {
     if (phase !== 'flying') return;
-    SFX.click();
+    SFX.tap();
     phase = 'resolving';
     lockOptions(btn, true);
     const correct = v === angle;
     if (correct) SFX.good();
+    SFX.servo();                       // barrel swinging to the tapped bearing
     barrel.style.transform = `translateX(-50%) rotate(${90 - v}deg)`;
     setTimeout(() => {
       SFX.fire();
@@ -194,6 +196,7 @@
             y: pivot.y - Math.sin(rad(v)) * spawnR * 0.92 };
       shootBolt(v, target, correct ? 240 : 430, () => {
         if (correct) return explodeMeteor(target);
+        SFX.alert();                   // you were wrong, and it's still coming
         setPrompt('Missed! Wrong bearing — brace for impact!', 'bad');
         phase = 'rushing';
       });
@@ -248,7 +251,8 @@
   }
 
   function explodeMeteor(at) {
-    SFX.boom();
+    SFX.approachStop();
+    SFX.shatter();
     meteorEl.style.visibility = 'hidden';
     spawnBurst(at, { sparks: 12 });
     hits++;
@@ -260,14 +264,15 @@
   function impact() {
     phase = 'resolving';
     const at = meteorPos();          // blow up right where it struck
-    SFX.boom();                      // low end of the blast...
-    SFX.impact();                    // ...plus crunch and warning whoop
+    SFX.approachStop();
+    SFX.impact();                    // sub drop + clang + whoop, mix ducked
     meteorEl.style.visibility = 'hidden';
     spawnBurst(at, { big: true, sparks: 18, smoke: 5 });
     flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
     game.classList.remove('shake'); void game.offsetWidth; game.classList.add('shake');
     lives--;
     renderLives();
+    SFX.lifeLost(lives);             // heartbeat under the impact tail
     setPrompt(`Ouch! It came in at ${angle}° — ${classify(angle)}. Shields down!`, 'bad');
     lockOptions(null, true);
     setTimeout(nextRound, 1900);
@@ -285,6 +290,7 @@
     meteorEl.style.visibility = 'hidden';
     svg.innerHTML = '';
     optionsEl.innerHTML = '';
+    SFX.approachStop();
     SFX.fanfare(won);
     resultTitle.textContent = won ? 'Mission complete!' : 'Station overrun!';
     resultText.textContent = won
@@ -331,7 +337,7 @@
   });
 
   document.getElementById('again-btn').addEventListener('click', () => {
-    SFX.click();
+    SFX.tap();
     reset();
   });
 

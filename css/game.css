@@ -529,3 +529,31 @@ body.pre-start #game {
     0 0 0 2px rgba(20, 30, 70, 0.18),
     0 6px 14px rgba(8, 12, 36, 0.45);
 }
+
+/* sound toggle — lives in the HUD pill; floats in the corner before the mission starts */
+#mute-btn {
+  font: inherit;
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  padding: 0.35em 0.7em;
+  border-radius: 999px;
+  border: 1.5px solid rgba(35, 48, 124, 0.35);
+  background: transparent;
+  color: #23307c;
+  cursor: pointer;
+}
+#mute-btn:hover { border-color: #2b3fd1; background: rgba(43, 63, 209, 0.08); }
+#mute-btn.off { color: #7c85b8; border-color: rgba(35, 48, 124, 0.18); }
+
+body.pre-start #mute-btn {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 60;
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(10, 10, 42, 0.55);
+  color: #eafcff;
+  font-size: 12px;
+  padding: 9px 13px;
+}
+body.pre-start #mute-btn:hover { border-color: #7ef06e; color: #7ef06e; background: rgba(10, 10, 42, 0.7); }
