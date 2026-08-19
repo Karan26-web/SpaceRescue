@@ -232,6 +232,20 @@ window.SFX = (function () {
     },
     click() { api.tap(); },              // back-compat with old call sites
 
+    /* ---------- lesson cues: element pop-in + ray-draw sweep ---------- */
+    pop() {
+      if (!ensure()) return;
+      const t = ctx.currentTime;
+      tone('sine', 520 * vary(0.05), 800, t, 0.09, 0.16);
+      burst(0.03, 'highpass', 2600, 2600, 0.05, t);
+    },
+    draw() {
+      if (!ensure()) return;
+      const t = ctx.currentTime;
+      burst(0.32, 'bandpass', 500, 2400, 0.11, t, 1.3);
+      tone('sine', 300, 700, t, 0.28, 0.07);
+    },
+
     /* ---------- 05 cannon swings to bearing ---------- */
     servo() {
       if (!ensure()) return;

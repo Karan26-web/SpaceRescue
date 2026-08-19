@@ -24,21 +24,16 @@
 
   const DISTRACTOR_POOL = [20, 25, 30, 42, 45, 55, 60, 75, 90, 100, 110, 120, 135, 150, 160, 165];
 
-  /* two meteor arts: the round fireball rides shallow, side-on approaches;
-     the teardrop comet (tail-up) sells a straight vertical drop.
-     face = the direction the art points with no rotation applied (deg,
-     screen convention: 0 = +x, 90 = down). ox/oy = the head's spot in the
+  /* one art for every approach: assets/comet.svg — rocky head lower-left,
+     painted flame wrapping the head and streaming to the upper-right, with
+     an animated turbulence filter baked into the file so the fire writhes.
+     face = the direction the head points with no rotation applied (deg,
+     screen convention: 0 = +x, 90 = down). ox/oy = the head centre in the
      image (%), used as both anchor and rotation origin so the head stays
-     glued to the ray. */
-  /* headR = radius of the art's rocky head as a fraction of rendered width,
-     used for surface-contact collision against the dome */
-  const ARTS = {
-    meteor: { src: 'assets/meteor.png', ox: 32, oy: 50, face: 180, headR: 0.24,
-              width: 'clamp(110px, 13vw, 190px)' },
-    comet:  { src: 'assets/comet.png',  ox: 50, oy: 84, face: 90,  headR: 0.32,
-              width: 'clamp(64px, 7vw, 100px)' }
-  };
-  let art = ARTS.meteor;
+     glued to the ray. headR = head radius as a fraction of rendered width,
+     used for surface-contact collision and the particle fire sheath. */
+  const art = { src: 'assets/comet.svg', ox: 35, oy: 57, face: 145,
+                headR: 0.2375, width: 'clamp(140px, 15vw, 230px)' };
 
   const INTROS = [
     'Meteor incoming! What angle is it riding in on?',
@@ -110,6 +105,12 @@
     const rot = travel * 180 / Math.PI - art.face;
     meteorEl.style.transform =
       `translate(${p.x}px, ${p.y}px) translate(-${art.ox}%, -${art.oy}%) rotate(${rot}deg)`;
+    // live fire: stream particles off the head, back along the approach ray
+    if (window.FireFX && meteorEl.style.visibility === 'visible') {
+      const tx = Math.cos(rad(angle)), ty = -Math.sin(rad(angle));  // tail-ward
+      FireFX.trail(p.x, p.y, tx, ty, meteorEl.offsetWidth * art.headR,
+                   phase === 'rushing' ? 1.8 : 1);
+    }
   }
 
   /* ---------- HUD ---------- */
@@ -156,8 +157,6 @@
     computePivot();
     drawRays();
     barrel.style.transform = 'translateX(-50%) rotate(0deg)';
-    // near-vertical drops use the straight teardrop comet
-    art = Math.abs(angle - 90) <= 4 ? ARTS.comet : ARTS.meteor;
     meteorEl.src = art.src;
     meteorEl.style.width = art.width;
     meteorEl.style.transformOrigin = `${art.ox}% ${art.oy}%`;
@@ -254,6 +253,7 @@
     SFX.approachStop();
     SFX.shatter();
     meteorEl.style.visibility = 'hidden';
+    if (window.FireFX) FireFX.burst(at.x, at.y, 1);
     spawnBurst(at, { sparks: 12 });
     hits++;
     setPrompt(`Direct hit! ${angle}° — ${classify(angle)}. Nice reading, pilot!`, 'good');
@@ -267,6 +267,7 @@
     SFX.approachStop();
     SFX.impact();                    // sub drop + clang + whoop, mix ducked
     meteorEl.style.visibility = 'hidden';
+    if (window.FireFX) FireFX.burst(at.x, at.y, 1.7);
     spawnBurst(at, { big: true, sparks: 18, smoke: 5 });
     flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on');
     game.classList.remove('shake'); void game.offsetWidth; game.classList.add('shake');
@@ -326,6 +327,8 @@
       progress += dt * 1.4;                    // slam in fast
       if (touchingDome()) return impact();
       renderMeteor();
+    } else if (phase === 'resolving') {
+      renderMeteor();     // frozen mid-air while the bolt flies — keep burning
     }
   }
 

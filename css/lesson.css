@@ -1,0 +1,628 @@
+/* ============ Space Rescue — angles teaching module ============ */
+
+#lesson {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  background: #0a1038;   /* teaching mode owns the whole screen */
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+}
+
+/* the full-screen neon teaching board — everything sits on it */
+#lesson-board {
+  position: absolute;
+  inset: 12px;
+  border-radius: 26px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(80, 110, 210, 0.22), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(105, 150, 235, 0.13) 0 1.5px, transparent 1.5px 52px),
+    repeating-linear-gradient(90deg, rgba(105, 150, 235, 0.13) 0 1.5px, transparent 1.5px 52px),
+    linear-gradient(180deg, #162462 0%, #101c50 100%);
+  box-shadow: inset 0 0 90px rgba(4, 8, 34, 0.6);
+  pointer-events: none;
+}
+
+#lesson-board::before,
+#lesson-board::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 29px;
+  padding: 3px;
+  background: linear-gradient(100deg, #4fd2ff 0%, #6f8cff 45%, #d97bff 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+#lesson-board::before {
+  inset: -5px;
+  border-radius: 31px;
+  padding: 6px;
+  filter: blur(10px);
+  opacity: 0.85;
+}
+
+#lesson.hide { opacity: 0; pointer-events: none; }
+
+#lesson-skip {
+  position: absolute;
+  top: 30px;
+  right: 34px;
+  z-index: 5;
+  cursor: pointer;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(10, 10, 42, 0.55);
+  color: #eafcff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+#lesson-skip:hover { border-color: #7ef06e; color: #7ef06e; }
+
+/* narrator instruction panel — sci-fi glass HUD (angular cyan frame,
+   glass surface, top HUD bar, corner shard, status dots) */
+#lesson-say {
+  position: relative;
+  margin: 26px auto 0 40px;
+  width: min(740px, calc(100% - 160px));
+  padding: 7px;
+  background: linear-gradient(180deg,
+    #eafcff 0%, #69e8ff 14%, #14c9f4 48%, #118fde 82%, #8beeff 100%);
+  clip-path: polygon(4% 0, 96% 0, 100% 28%, 100% 72%, 96% 100%, 4% 100%, 0 72%, 0 28%);
+  filter:
+    drop-shadow(0 0 5px rgba(79, 224, 255, 0.95))
+    drop-shadow(0 0 12px rgba(0, 159, 255, 0.75))
+    drop-shadow(0 4px 6px rgba(1, 77, 190, 0.45));
+}
+
+.say-inner {
+  position: relative;
+  overflow: hidden;
+  min-height: clamp(84px, 8.5vw, 112px);
+  padding: 1em 3.6em 1.7em 3.2em;
+  clip-path: polygon(3.4% 0, 96.6% 0, 100% 26%, 100% 74%, 96.6% 100%, 3.4% 100%, 0 74%, 0 26%);
+  background: linear-gradient(115deg,
+    rgba(255, 255, 255, 0.95) 0%, rgba(232, 241, 255, 0.96) 35%,
+    rgba(226, 234, 251, 0.96) 66%, rgba(247, 249, 255, 0.98) 100%);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.9),
+    inset 0 8px 15px rgba(255, 255, 255, 0.75),
+    inset 0 -6px 10px rgba(95, 165, 255, 0.16);
+}
+
+/* glass reflection along the top */
+.say-inner::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5%;
+  right: 5%;
+  height: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+  border-radius: 50%;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* top HUD decoration: line — capsule — line */
+.say-hud {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 2px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 44%;
+  height: 14px;
+  pointer-events: none;
+}
+
+.say-hud i {
+  height: 4px;
+  flex: 1;
+  border-radius: 10px;
+  background: linear-gradient(90deg,
+    transparent, #08cef8 20%, #72eeff 50%, #08cef8 80%, transparent);
+  box-shadow: 0 0 4px #00d9ff, 0 0 7px rgba(0, 217, 255, 0.65);
+}
+
+.say-hud b {
+  width: clamp(80px, 9vw, 130px);
+  height: 9px;
+  border-radius: 20px;
+  border: 2px solid #6bf2ff;
+  background: linear-gradient(180deg, #47efff, #07bde8);
+  box-shadow:
+    0 0 5px #2be5ff,
+    0 0 10px rgba(0, 212, 255, 0.8),
+    inset 0 0 5px rgba(255, 255, 255, 0.75);
+}
+
+/* cyan corner shard, bottom-left */
+.say-accent {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  bottom: 11px;
+  width: 36px;
+  height: 33px;
+  clip-path: polygon(0 0, 35% 0, 100% 100%, 58% 100%);
+  background: linear-gradient(135deg, #75efff, #03bce9);
+  opacity: 0.9;
+  box-shadow: 0 0 6px #38dfff, 0 0 12px rgba(36, 210, 255, 0.5);
+  pointer-events: none;
+}
+
+/* status dots, bottom-right */
+.say-dots {
+  position: absolute;
+  right: 38px;
+  bottom: 13px;
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.say-dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #4eeeff, #07aee0);
+  box-shadow: 0 0 4px rgba(0, 207, 255, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+#lesson-say .line {
+  margin: 0;
+  min-height: 2.5em;
+  color: #17356f;
+  font-size: clamp(0.95rem, 1.9vw, 1.25rem);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+#lesson-say .hint {
+  position: absolute;
+  right: 9em;
+  bottom: 1.1em;
+  color: #1178c2;
+  font-size: clamp(0.6rem, 1.1vw, 0.72rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  animation: lesson-hint 1.4s ease-in-out infinite;
+}
+
+@keyframes lesson-hint {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+
+/* --- teaching rail: text + controls in a left panel, board stays clear --- */
+#lesson-rail[hidden] { display: none; }
+
+#lesson-rail {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  width: min(370px, 30vw);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 28px 26px;
+  border-radius: 26px 0 0 26px;
+  background: rgba(8, 12, 36, 0.92);
+  border-right: 2px solid rgba(120, 150, 255, 0.22);
+  cursor: default;
+}
+
+.rail-step {
+  color: #8fa2e8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.rail-narr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  color: #ffd75e;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.rail-narr i {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #bfe4ff, #2b8fd6);
+  box-shadow: 0 0 14px rgba(90, 190, 255, 0.8);
+}
+
+/* in the rail, the glass panel slims down to fit the column */
+#lesson.rail #lesson-say {
+  position: static;
+  margin: 12px 0 0;
+  width: auto;
+  padding: 5px;
+}
+
+#lesson.rail .say-inner {
+  min-height: 0;
+  padding: 1em 1.5em 1.5em;
+}
+
+#lesson.rail .say-accent { width: 26px; height: 24px; left: 9px; bottom: 9px; }
+#lesson.rail .say-dots { right: 24px; bottom: 11px; }
+#lesson.rail .say-hud b { width: 70px; }
+
+#lesson.rail #lesson-say .line {
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
+  line-height: 1.3;
+}
+
+#lesson.rail #lesson-say .hint { display: none; }
+
+.rail-drag-slot h4 {
+  margin: 30px 0 8px;
+  color: #8fa2e8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+#lesson-rail .lesson-drag {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 7px 0;
+  padding: 0.85em;
+  border-radius: 14px;
+  color: #23307c;
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  text-align: center;
+}
+
+#lesson.rail #lesson-scene {
+  width: auto;
+  margin: 0 18px 0 calc(min(370px, 30vw) + 22px);
+}
+
+/* --- stage: transparent drawing area on the board --- */
+#lesson-scene {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: min(94vw, 1300px);
+  margin: 0 auto;
+}
+
+#lesson-stage {
+  width: 100%;
+  height: 100%;
+}
+
+#lesson-stage.draggable { cursor: grab; }
+
+.ls-ray {
+  stroke: #f4f6ff;
+  stroke-width: 7;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 7px rgba(150, 190, 255, 0.5));
+}
+
+.ls-ref {
+  stroke: #f4f6ff;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 14 13;
+  opacity: 0.75;
+}
+
+#ls-arc {
+  stroke: rgba(240, 243, 255, 0.9);
+  stroke-width: 9;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(150, 190, 255, 0.55));
+}
+
+#ls-corner {
+  stroke: rgba(233, 236, 248, 0.9);
+  stroke-width: 7;
+  stroke-linejoin: miter;
+}
+
+#ls-pt {
+  fill: #ffffff;
+  filter: drop-shadow(0 0 12px rgba(150, 200, 255, 0.9));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ls-pt-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes ls-pt-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.22); }
+}
+
+#ls-label {
+  fill: #ffffff;
+  font-size: 44px;
+  font-weight: 800;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+#ls-label.pop { animation: ls-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
+
+@keyframes ls-pop {
+  from { transform: scale(0.35); opacity: 0; }
+}
+
+.ls-callout {
+  fill: #ffffff;
+  font-size: 40px;
+  font-weight: 800;
+}
+
+/* quiz cards */
+.ls-card { cursor: pointer; }
+.ls-card rect {
+  fill: rgba(18, 22, 44, 0.88);
+  stroke: rgba(140, 160, 255, 0.25);
+  stroke-width: 2;
+  transition: stroke 0.2s ease;
+}
+.ls-card:hover rect { stroke: rgba(140, 160, 255, 0.7); }
+.ls-card.right rect { stroke: #7ef06e; stroke-width: 5; }
+.ls-card.wrong rect { stroke: #ff5f54; stroke-width: 5; }
+
+.ls-mini-ray {
+  stroke: #f4f6ff;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.ls-mini-arc {
+  stroke: rgba(233, 236, 248, 0.85);
+  stroke-width: 6;
+}
+
+.ls-recap-name {
+  fill: #ffd75e;
+  font-size: 30px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+/* HTML overlay layer: drop zones, drag chips, external link */
+#lesson-zones {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lesson-zone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 165px;
+  padding: 0.65em 1em;
+  border: 3px dashed #ff6b60;
+  border-radius: 12px;
+  background: rgba(18, 24, 56, 0.6);
+  color: #8f9ccc;
+  font-weight: 800;
+  font-size: clamp(0.72rem, 1.25vw, 0.9rem);
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+.lesson-zone.filled {
+  border-style: solid;
+  border-color: #57c46b;
+  background: rgba(214, 247, 221, 0.95);
+  color: #14672f;
+  font-size: clamp(0.9rem, 1.6vw, 1.1rem);
+  letter-spacing: 0.02em;
+}
+
+.lesson-drag {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  min-width: 130px;
+  padding: 0.55em 0.9em;
+  border: 3px solid #ffffff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f6f9ff 0%, #dfe7fb 100%);
+  color: #c22a20;
+  font: inherit;
+  font-weight: 800;
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  box-shadow: 0 8px 16px rgba(5, 8, 30, 0.4);
+}
+.lesson-drag:active { cursor: grabbing; }
+
+/* drag-hint hand: white cartoon cursor nudging along the drag direction */
+.lesson-hand {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  font-size: clamp(34px, 3.8vw, 52px);
+  line-height: 1;
+  filter: grayscale(1) brightness(2.2)
+          drop-shadow(0 4px 10px rgba(0, 0, 12, 0.65));
+  animation: hand-nudge 1.5s ease-in-out infinite;
+}
+
+@keyframes hand-nudge {
+  0%, 100% { transform: translate(-30%, -6%) rotate(-14deg); }
+  50%      { transform: translate(calc(-30% + 30px), calc(-6% + 24px)) rotate(12deg); }
+}
+
+#lesson-link {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  color: #55d6ff;
+  font-weight: 800;
+  font-size: clamp(0.85rem, 1.6vw, 1.05rem);
+  text-decoration: none;
+  border-bottom: 2px solid rgba(85, 214, 255, 0.5);
+}
+#lesson-link:hover { border-color: #55d6ff; }
+
+/* --- footer: learned-type chips (left) + action buttons (right) --- */
+#lesson-footer {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 38px 30px;
+  min-height: 104px;
+}
+
+#lesson-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* learned-type recap cards — storyboard-sized so they stay readable */
+.lesson-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px 12px;
+  border-radius: 16px;
+  background: rgba(233, 238, 255, 0.94);
+  color: #23307c;
+  font-size: clamp(0.72rem, 1.15vw, 1rem);
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(5, 8, 30, 0.4);
+}
+.lesson-chip svg {
+  width: clamp(88px, 9vw, 150px);
+  height: auto;
+}
+.lesson-chip .ls-mini-ray { stroke: #23307c; stroke-width: 3.5; }
+.lesson-chip .ls-mini-arc { stroke: #23307c; stroke-width: 3; }
+.lesson-chip circle { fill: #23307c; }
+
+#lesson-actions { display: flex; gap: 12px; }
+
+.lesson-btn {
+  cursor: pointer;
+  min-width: 130px;
+  padding: 0.65em 1.4em;
+  border: 3px solid #ffffff;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f6f9ff 0%, #dfe7fb 100%);
+  color: #23307c;
+  font: inherit;
+  font-size: clamp(1rem, 1.9vw, 1.3rem);
+  font-weight: 800;
+  box-shadow:
+    inset 0 -0.25em 0 rgba(105, 122, 190, 0.35),
+    0 8px 16px rgba(5, 8, 30, 0.4);
+  transition: transform 0.1s ease;
+}
+.lesson-btn:hover { transform: translateY(-2px); }
+.lesson-btn:active { transform: translateY(2px); }
+.lesson-btn:disabled { cursor: default; opacity: 0.8; }
+.lesson-btn.right {
+  background: linear-gradient(180deg, #d9f7dd 0%, #a8e8b4 100%);
+  color: #14672f;
+  border-color: #eafff0;
+}
+.lesson-btn.wrong {
+  background: linear-gradient(180deg, #ffd9d5 0%, #f5a9a2 100%);
+  color: #8f1f16;
+  border-color: #ffecea;
+}
+
+/* --- completion card --- */
+#lesson-final[hidden] { display: none; }
+
+#lesson-final {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  text-align: center;
+  padding: 0 24px;
+}
+
+#lesson-final h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 7vw, 4.4rem);
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 3px 0 #c6c4ec, 0 6px 0 #7b80c9,
+    0 9px 2px rgba(24, 30, 105, 0.9),
+    0 14px 16px rgba(0, 0, 24, 0.65);
+}
+
+#lesson-final .final-sub {
+  margin: 0 0 0.8em;
+  color: #b9c5f5;
+  font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+  font-weight: 700;
+}
+
+#lesson-final .final-line {
+  margin: 0.2em 0;
+  padding: 0.6em 1.2em;
+  border: 1.5px solid rgba(140, 160, 255, 0.35);
+  border-radius: 14px;
+  background: rgba(7, 10, 34, 0.85);
+  color: #eaf0ff;
+  font-size: clamp(0.9rem, 1.9vw, 1.15rem);
+  font-weight: 700;
+}
+
+#lesson-final .final-line.ready {
+  border-color: rgba(126, 240, 110, 0.55);
+  color: #a9f59d;
+}
+
+#defend-btn {
+  cursor: pointer;
+  margin-top: 1.4em;
+  padding: 0.8em 2.2em;
+  border: 5px solid #ffffff;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #7ddc6e 0%, #4cbf4e 100%);
+  color: #ffffff;
+  font: inherit;
+  font-size: clamp(1.1rem, 2.6vw, 1.6rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 0 rgba(24, 96, 40, 0.6);
+  box-shadow:
+    inset 0 -0.4em 0 rgba(30, 118, 48, 0.55),
+    0 12px 24px rgba(8, 12, 36, 0.45);
+}
+#defend-btn:active { transform: translateY(3px); }

@@ -6,6 +6,8 @@
   <title>Space Rescue</title>
   <link rel="stylesheet" href="css/space.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/intro.css">
+  <link rel="stylesheet" href="css/lesson.css">
 </head>
 <body class="pre-start">
   <canvas id="space-bg"></canvas>
@@ -20,6 +22,65 @@
       </h1>
       <button type="button" id="start-btn">START</button>
     </div>
+  </div>
+
+  <!-- ============ Narrated intro: three story cards after START ============ -->
+  <div id="intro" class="hide" hidden>
+    <button type="button" id="intro-skip">SKIP ▸</button>
+
+    <!-- Hook 1 — context: meteors streak toward the station -->
+    <section class="slide">
+      <div class="scene">
+        <img class="intro-station" src="assets/spaceStation.png" alt="Space station orbiting Earth">
+        <img class="intro-meteor m1" src="assets/comet.svg" alt="">
+        <img class="intro-meteor m2" src="assets/comet.svg" alt="">
+        <img class="intro-meteor m3" src="assets/comet.svg" alt="">
+      </div>
+      <div class="narrator">
+        <span class="who">NARRATOR:</span>
+        <p class="line"></p>
+        <span class="hint">TAP TO CONTINUE ▸</span>
+      </div>
+    </section>
+
+    <!-- Hook 2 — the problem: our cannon, aim unsolved -->
+    <section class="slide">
+      <div class="scene">
+        <div class="intro-cannon">
+          <img class="intro-barrel" src="assets/Canon1.svg" alt="">
+          <img class="intro-base" src="assets/Canon2.svg" alt="Defence cannon">
+        </div>
+        <svg class="warn" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M32 6 60 56 H4 Z" fill="none" stroke="#ff4b3e" stroke-width="5" stroke-linejoin="round"/>
+          <line x1="32" y1="24" x2="32" y2="40" stroke="#ff4b3e" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="32" cy="48" r="3.2" fill="#ff4b3e"/>
+        </svg>
+      </div>
+      <div class="narrator">
+        <span class="who">NARRATOR:</span>
+        <p class="line"></p>
+        <span class="hint">TAP TO CONTINUE ▸</span>
+      </div>
+    </section>
+
+    <!-- Hook 3 — introduce angles: live protractor sweep on the cannon -->
+    <section class="slide">
+      <div class="scene">
+        <svg id="angle-demo" viewBox="0 0 640 400" aria-hidden="true">
+          <line class="demo-base" x1="150" y1="330" x2="610" y2="330"/>
+          <line class="demo-ray" x1="150" y1="330" x2="490" y2="330"/>
+          <path class="demo-arc" d="" fill="none"/>
+          <image href="assets/Canon2.svg" x="55" y="194.8" width="190" height="143.8"/>
+          <image class="demo-barrel" href="assets/Canon1.svg" x="125.3" y="197.25" width="49.4" height="147.5"/>
+          <text class="demo-deg" x="320" y="300">0°</text>
+        </svg>
+      </div>
+      <div class="narrator">
+        <span class="who">NARRATOR:</span>
+        <p class="line"></p>
+        <span class="hint">TAP TO START ▸</span>
+      </div>
+    </section>
   </div>
 
   <!-- ============ Angle defence game ============ -->
@@ -37,7 +98,8 @@
     <!-- play area: protractor rays, meteor, cannon -->
     <div id="arena">
       <svg id="angle-svg" aria-hidden="true"></svg>
-      <img id="meteor" src="assets/meteor.png" alt="Incoming meteor">
+      <img id="meteor" src="assets/comet.svg" alt="Incoming meteor">
+      <canvas id="fx-canvas" aria-hidden="true"></canvas>
       <div id="cannon">
         <img id="cannon-barrel" src="assets/Canon1.svg" alt="">
         <img id="cannon-base" src="assets/Canon2.svg" alt="Cannon">
@@ -61,7 +123,10 @@
   <script src="export/space-background.js"></script>
   <script src="js/space-init.js"></script>
   <script src="js/sfx.js"></script>
+  <script src="js/fire-fx.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/intro.js"></script>
+  <script src="js/lesson.js"></script>
   <script src="js/start-screen.js"></script>
   <script>
     (function () {

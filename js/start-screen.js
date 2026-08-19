@@ -10,9 +10,15 @@
     SFX.ambienceStop();
     SFX.launch();
     screen.classList.add('hide');
-    document.body.classList.remove('pre-start');
     screen.addEventListener('transitionend', () => screen.remove(), { once: true });
-    if (window.AngleGame) window.AngleGame.start();
+    // body stays pre-start (game hidden) through the narrated intro and the
+    // angles lesson; the game is only revealed and measured at the very end
+    const go = () => {
+      document.body.classList.remove('pre-start');
+      if (window.AngleGame) window.AngleGame.start();
+    };
+    const teach = window.Lesson ? () => Lesson.play(go) : go;
+    if (window.Intro) Intro.play(teach); else teach();
   }
 
   // the drone can only arm after a gesture, so start it on the first one
