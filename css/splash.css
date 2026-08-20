@@ -1,0 +1,197 @@
+/* ============ Space Rescue — shared splash screens ============
+   One design, two full-screen moments:
+     #lesson-final — the ANGLE DEFENSE start splash, after the lesson
+     #result       — the end-of-run scoreboard, after the mission
+   Give the container class="splash" and compose it from the .splash-*
+   parts below. Each screen keeps its own positioning/backdrop rules in
+   its own stylesheet; everything visual lives here so the two stay
+   siblings by construction. */
+
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  text-align: center;
+  padding: 0 24px;
+  overflow: hidden;
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+}
+
+/* content rides above the scenery */
+.splash > * { position: relative; z-index: 1; }
+
+/* --- scenery: rolling purple hills along the bottom --- */
+.splash-hills {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  z-index: 0;
+  pointer-events: none;
+}
+.splash-hills::before,
+.splash-hills::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+.splash-hills::before {
+  left: -22%;
+  width: 95%;
+  top: 16%;
+  height: 170%;
+  background: #363a8c;
+}
+.splash-hills::after {
+  right: -28%;
+  width: 105%;
+  top: 32%;
+  height: 180%;
+  background: #2c2f74;
+}
+
+.splash-comet {
+  position: absolute;
+  top: 5%;
+  left: 4%;
+  width: clamp(90px, 11vw, 170px);
+  animation: splash-drift 5s ease-in-out infinite;
+}
+
+@keyframes splash-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-14px, 12px); }
+}
+
+/* twinkling sparkles scattered around the title */
+.splash-star {
+  position: absolute;
+  font-style: normal;
+  color: #b9a7ff;
+  animation: splash-twinkle 2.2s ease-in-out infinite;
+}
+.splash-star::before { content: "✦"; }
+.splash-star.s1 { top: 13%; left: 24%;  font-size: 20px; }
+.splash-star.s2 { top: 21%; right: 19%; font-size: 26px; animation-delay: 0.4s; }
+.splash-star.s3 { top: 47%; left: 12%;  font-size: 18px; animation-delay: 0.9s; }
+.splash-star.s4 { top: 38%; right: 9%;  font-size: 22px; animation-delay: 1.3s; }
+.splash-star.s5 { top: 7%;  right: 38%; font-size: 16px; animation-delay: 0.6s; }
+
+@keyframes splash-twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+/* --- type --- */
+.splash-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.4rem, 7.5vw, 5.2rem);
+  letter-spacing: 0.03em;
+  text-shadow:
+    0 3px 0 #c6c4ec, 0 6px 0 #7b80c9,
+    0 9px 2px rgba(24, 30, 105, 0.9),
+    0 14px 16px rgba(0, 0, 24, 0.65);
+}
+
+.splash-sub {
+  margin: 0.2em 0 0;
+  color: #cdd4ff;
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  font-weight: 700;
+}
+
+/* --- cannon on its protractor mount, sinking into the hills --- */
+.splash-cannon {
+  width: clamp(240px, 30vw, 400px);
+  margin: 0.4em 0 0.2em;
+  filter: drop-shadow(0 10px 24px rgba(3, 8, 34, 0.55));
+}
+.fc-arc { stroke: #f5a623; stroke-width: 4; opacity: 0.9; }
+.fc-ticks line { stroke: #f5a623; stroke-width: 3.5; opacity: 0.8; }
+.fc-disc { fill: #edf1fb; }
+.fc-ring { stroke: #d5dcf0; stroke-width: 3; }
+
+/* --- score readout (end-of-run) --- */
+.splash-stats {
+  display: flex;
+  gap: clamp(14px, 2.5vw, 34px);
+  margin: 0.7em 0 0.1em;
+}
+
+.splash-stat {
+  min-width: clamp(120px, 13vw, 175px);
+  padding: 0.55em 1.1em 0.6em;
+  border: 2.5px solid rgba(136, 219, 255, 0.9);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #e9f1fe 100%);
+  box-shadow:
+    0 0 0 4px rgba(88, 189, 255, 0.18),
+    0 8px 20px rgba(5, 8, 30, 0.4);
+}
+
+.splash-stat b {
+  display: block;
+  color: #1e2a66;
+  font-size: clamp(1.4rem, 3.2vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.splash-stat span {
+  display: block;
+  margin-top: 0.15em;
+  color: #4a63b8;
+  font-size: clamp(0.6rem, 1.1vw, 0.75rem);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* --- call to action --- */
+.splash-btn {
+  cursor: pointer;
+  margin-top: 0.5em;
+  min-width: min(480px, 60vw);
+  padding: 0.75em 2.6em;
+  border: 6px solid #ffffff;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #7ddc6e 0%, #4cbf4e 100%);
+  color: #ffffff;
+  font: inherit;
+  font-size: clamp(1.3rem, 3.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 0 rgba(24, 96, 40, 0.6);
+  box-shadow:
+    inset 0 -0.4em 0 rgba(30, 118, 48, 0.55),
+    0 12px 24px rgba(8, 12, 36, 0.45);
+  transition: transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.splash-btn:hover { transform: translateY(-2px); }
+.splash-btn:active { transform: translateY(3px); }
+
+/* retry variant — used when the run ended badly */
+.splash-btn.retry {
+  background: linear-gradient(180deg, #f8867e 0%, #ea5b53 100%);
+  text-shadow: 0 2px 0 rgba(140, 40, 34, 0.6);
+  box-shadow:
+    inset 0 -0.4em 0 rgba(183, 55, 62, 0.55),
+    0 12px 24px rgba(8, 12, 36, 0.45);
+}
+
+.splash-tap {
+  margin: 0.7em 0 0;
+  color: #b9c0f5;
+  font-size: clamp(0.85rem, 1.7vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  animation: splash-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes splash-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}

@@ -14,15 +14,24 @@
   const meteorEl = document.getElementById('meteor');
   const barrel = document.getElementById('cannon-barrel');
   const promptEl = document.getElementById('prompt');
-  const roundLabel = document.getElementById('round-label');
   const livesEl = document.getElementById('lives');
   const optionsEl = document.getElementById('options');
   const flash = document.getElementById('damage-flash');
   const result = document.getElementById('result');
   const resultTitle = document.getElementById('result-title');
   const resultText = document.getElementById('result-text');
+  const againBtn = document.getElementById('again-btn');
 
-  const DISTRACTOR_POOL = [20, 25, 30, 42, 45, 55, 60, 75, 90, 100, 110, 120, 135, 150, 160, 165];
+  /* answers are angle TYPES, not degree readings. Each type carries a
+     representative bearing the cannon fires along when that (wrong) type
+     is picked — the bolt visibly streaks off where the player aimed. */
+  const TYPES = [
+    { name: 'Acute angle',    test: a => a > 0 && a < 90,    aim: 45 },
+    { name: 'Right angle',    test: a => a === 90,           aim: 90 },
+    { name: 'Obtuse angle',   test: a => a > 90 && a < 180,  aim: 135 },
+    { name: 'Straight angle', test: a => a === 180,          aim: 180 }
+  ];
+  const typeOf = a => TYPES.find(t => t.test(a));
 
   /* one art for every approach: assets/comet.svg — rocky head lower-left,
      painted flame wrapping the head and streaming to the upper-right, with
@@ -36,10 +45,10 @@
                 headR: 0.2375, width: 'clamp(140px, 15vw, 230px)' };
 
   const INTROS = [
-    'Meteor incoming! What angle is it riding in on?',
-    'Check the rays — which angle matches its path?',
-    'Read the sky like a protractor. Your call, pilot!',
-    'Line it up: what is the meteor’s approach angle?'
+    'Meteor incoming! What type of angle is it riding in on?',
+    'Check the rays — which type of angle matches its path?',
+    'Compare it with the horizon line. Your call, pilot!',
+    'Look at the arc: what type of angle is the approach?'
   ];
 
   let round = 0, lives = LIVES, hits = 0;
@@ -58,13 +67,16 @@
     // measure off the dome base — the barrel rotates, so its rect is unstable
     const b = document.getElementById('cannon-base').getBoundingClientRect();
     const a = arena.getBoundingClientRect();
-    pivot = { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height * 0.94 };
+    // Camnono.png is a tightly-cropped dome — content fills the image edge
+    // to edge, so the ground line sits at the very bottom (no bottom-padding
+    // fudge factor needed, unlike the old Canon2.svg art)
+    pivot = { x: b.left - a.left + b.width / 2, y: b.top - a.top + b.height };
     baseHalf = b.width / 2;
-    // The dome art is an ellipse around the pivot: half-width 47% of the
-    // image, and visibly taller than that (content spans 19%..94% of the
-    // height). Intersect this round's ray with it so the meteor detonates
-    // exactly where it touches the rim, at any approach angle.
-    const rx = b.width * 0.47, ry = b.height * 0.75;
+    // The dome art is an ellipse around the pivot: half-width = half the
+    // image (content spans edge to edge), height = the full image (apex at
+    // the top edge, base at the pivot). Intersect this round's ray with it
+    // so the meteor detonates exactly where it touches the rim.
+    const rx = b.width * 0.5, ry = b.height;
     domeR = (rx * ry) / Math.hypot(ry * Math.cos(rad(angle)), rx * Math.sin(rad(angle)));
     // spawn just past where this round's ray leaves the arena, so the meteor
     // slides into view within the first second or two
@@ -81,8 +93,10 @@
     return { x: pivot.x + Math.cos(rad(angle)) * r, y: pivot.y - Math.sin(rad(angle)) * r };
   }
 
-  /* dashed baseline ray + approach ray + the arc between them */
+  /* solid horizon baseline through the pivot (the 0° reference the angle
+     is read against), dashed approach ray, and the arc between them */
   function drawRays() {
+    const W = arena.clientWidth;
     const L = spawnR;
     const ex = pivot.x + Math.cos(rad(angle)) * L;
     const ey = pivot.y - Math.sin(rad(angle)) * L;
@@ -90,13 +104,23 @@
     const ax = pivot.x + Math.cos(rad(angle)) * R;
     const ay = pivot.y - Math.sin(rad(angle)) * R;
     const largeArc = angle > 180 ? 1 : 0;
+    // the true pivot now sits almost exactly on the arena's bottom edge
+    // (Camnono.png's dome is cropped flush, unlike the old padded art) —
+    // clamp only enough to keep the halo's glow from clipping at the edge
+    const hy = Math.min(pivot.y, arena.clientHeight - 5);
     svg.innerHTML =
-      `<line x1="${pivot.x}" y1="${pivot.y}" x2="${pivot.x + L}" y2="${pivot.y}"
-             stroke="#7ef06e" stroke-width="3" stroke-dasharray="10 9" opacity="0.85"/>
+      `<line x1="0" y1="${hy}" x2="${W}" y2="${hy}"
+             stroke="rgba(10, 16, 56, 0.55)" stroke-width="9"/>
+       <line x1="0" y1="${hy}" x2="${W}" y2="${hy}"
+             stroke="#f4f6ff" stroke-width="4"
+             style="filter: drop-shadow(0 0 6px rgba(150,190,255,0.8))"/>
+       <text x="${W - 14}" y="${hy - 12}" text-anchor="end" fill="#f4f6ff"
+             font-size="20" font-weight="800"
+             style="paint-order: stroke; stroke: rgba(10,16,56,0.7); stroke-width: 4px">0°</text>
        <line x1="${pivot.x}" y1="${pivot.y}" x2="${ex}" y2="${ey}"
              stroke="#7ef06e" stroke-width="3" stroke-dasharray="10 9" opacity="0.85"/>
        <path d="M ${pivot.x + R} ${pivot.y} A ${R} ${R} 0 ${largeArc} 0 ${ax} ${ay}"
-             fill="none" stroke="#ffd45e" stroke-width="3" opacity="0.9"/>`;
+             fill="none" stroke="#ffd45e" stroke-width="3.5" opacity="0.95"/>`;
   }
 
   function renderMeteor() {
@@ -133,19 +157,15 @@
   /* ---------- rounds ---------- */
 
   function buildOptions() {
-    const opts = [angle];
-    const pool = DISTRACTOR_POOL.filter(v => v !== angle);
-    while (opts.length < 4)
-      opts.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
-    opts.sort(() => Math.random() - 0.5);
-
+    const opts = TYPES.slice().sort(() => Math.random() - 0.5);
     optionsEl.innerHTML = '';
-    for (const v of opts) {
+    for (const t of opts) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'opt-btn';
-      b.textContent = v + '°';
-      b.addEventListener('click', () => answer(v, b));
+      b.dataset.type = t.name;
+      b.textContent = t.name;
+      b.addEventListener('click', () => answer(t, b));
       optionsEl.appendChild(b);
     }
   }
@@ -154,7 +174,8 @@
     angle = QUESTIONS[round];
     progress = 0;
     phase = 'flying';
-    computePivot();
+    buildOptions();   // fill the answer bar FIRST — it changes the arena's
+    computePivot();   // height, and all geometry below measures the arena
     drawRays();
     barrel.style.transform = 'translateX(-50%) rotate(0deg)';
     meteorEl.src = art.src;
@@ -163,40 +184,41 @@
     meteorEl.style.visibility = 'visible';
     renderMeteor();
     SFX.approachStart(APPROACH_SECS);
-    roundLabel.textContent = `Meteor ${round + 1} / ${QUESTIONS.length}`;
     setPrompt(INTROS[round % INTROS.length]);
-    buildOptions();
   }
 
   function lockOptions(chosenBtn, correctToo) {
+    const right = typeOf(angle).name;
     for (const b of optionsEl.children) {
       b.disabled = true;
-      if (correctToo && b.textContent === angle + '°') b.classList.add('right');
+      if (correctToo && b.dataset.type === right) b.classList.add('right');
     }
-    if (chosenBtn && chosenBtn.textContent !== angle + '°') chosenBtn.classList.add('wrong');
+    if (chosenBtn && chosenBtn.dataset.type !== right) chosenBtn.classList.add('wrong');
   }
 
-  /* the cannon always swings to the tapped bearing and fires: a correct
-     bearing intercepts the meteor, a wrong one streaks off into empty space */
-  function answer(v, btn) {
+  /* the cannon swings and fires: the correct type intercepts along the real
+     approach ray, a wrong type fires along that type's own bearing and the
+     bolt streaks off into empty space */
+  function answer(t, btn) {
     if (phase !== 'flying') return;
     SFX.tap();
     phase = 'resolving';
     lockOptions(btn, true);
-    const correct = v === angle;
+    const correct = t.name === typeOf(angle).name;
+    const aimDeg = correct ? angle : t.aim;
     if (correct) SFX.good();
     SFX.servo();                       // barrel swinging to the tapped bearing
-    barrel.style.transform = `translateX(-50%) rotate(${90 - v}deg)`;
+    barrel.style.transform = `translateX(-50%) rotate(${90 - aimDeg}deg)`;
     setTimeout(() => {
       SFX.fire();
       const target = correct
         ? meteorPos()
-        : { x: pivot.x + Math.cos(rad(v)) * spawnR * 0.92,
-            y: pivot.y - Math.sin(rad(v)) * spawnR * 0.92 };
-      shootBolt(v, target, correct ? 240 : 430, () => {
+        : { x: pivot.x + Math.cos(rad(aimDeg)) * spawnR * 0.92,
+            y: pivot.y - Math.sin(rad(aimDeg)) * spawnR * 0.92 };
+      shootBolt(aimDeg, target, correct ? 240 : 430, () => {
         if (correct) return explodeMeteor(target);
         SFX.alert();                   // you were wrong, and it's still coming
-        setPrompt('Missed! Wrong bearing — brace for impact!', 'bad');
+        setPrompt('Missed! That’s not its angle type — brace for impact!', 'bad');
         phase = 'rushing';
       });
     }, 340);
@@ -293,10 +315,13 @@
     optionsEl.innerHTML = '';
     SFX.approachStop();
     SFX.fanfare(won);
-    resultTitle.textContent = won ? 'Mission complete!' : 'Station overrun!';
+    resultTitle.textContent = won ? 'MISSION COMPLETE' : 'STATION OVERRUN';
     resultText.textContent = won
-      ? `You shot down ${hits} of ${QUESTIONS.length} meteors. Angle master!`
-      : `The meteors got through after ${hits} hit${hits === 1 ? '' : 's'}. Try again, pilot!`;
+      ? '✦  You read every angle right — angle master!  ✦'
+      : '✦  The meteors broke through. Try again, pilot!  ✦';
+    document.getElementById('stat-hits').textContent = `${hits}/${QUESTIONS.length}`;
+    document.getElementById('stat-shields').textContent = Math.max(0, lives);
+    againBtn.classList.toggle('retry', !won);   // red button when the run failed
     result.classList.remove('hide');
   }
 
@@ -339,7 +364,7 @@
     renderMeteor();
   });
 
-  document.getElementById('again-btn').addEventListener('click', () => {
+  againBtn.addEventListener('click', () => {
     SFX.tap();
     reset();
   });

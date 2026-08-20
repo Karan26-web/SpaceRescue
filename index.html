@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Space Rescue</title>
   <link rel="stylesheet" href="css/space.css">
+  <link rel="stylesheet" href="css/panel.css">
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/intro.css">
   <link rel="stylesheet" href="css/lesson.css">
+  <link rel="stylesheet" href="css/splash.css">
 </head>
 <body class="pre-start">
   <canvas id="space-bg"></canvas>
@@ -39,7 +41,6 @@
       <div class="narrator">
         <span class="who">NARRATOR:</span>
         <p class="line"></p>
-        <span class="hint">TAP TO CONTINUE ▸</span>
       </div>
     </section>
 
@@ -48,7 +49,7 @@
       <div class="scene">
         <div class="intro-cannon">
           <img class="intro-barrel" src="assets/Canon1.svg" alt="">
-          <img class="intro-base" src="assets/Canon2.svg" alt="Defence cannon">
+          <img class="intro-base" src="assets/Camnono.png" alt="Defence cannon">
         </div>
         <svg class="warn" viewBox="0 0 64 64" aria-hidden="true">
           <path d="M32 6 60 56 H4 Z" fill="none" stroke="#ff4b3e" stroke-width="5" stroke-linejoin="round"/>
@@ -59,7 +60,6 @@
       <div class="narrator">
         <span class="who">NARRATOR:</span>
         <p class="line"></p>
-        <span class="hint">TAP TO CONTINUE ▸</span>
       </div>
     </section>
 
@@ -70,29 +70,27 @@
           <line class="demo-base" x1="150" y1="330" x2="610" y2="330"/>
           <line class="demo-ray" x1="150" y1="330" x2="490" y2="330"/>
           <path class="demo-arc" d="" fill="none"/>
-          <image href="assets/Canon2.svg" x="55" y="194.8" width="190" height="143.8"/>
+          <!-- Camnono.png's dome is wider relative to its height than the old
+               Canon2.svg art — height kept the same (matches the barrel's
+               calibrated foot position) and width recomputed to its true
+               aspect, recentred under the barrel's x=150 pivot -->
+          <image href="assets/Camnono.png" x="46.4" y="194.8" width="207.1" height="143.8"/>
           <image class="demo-barrel" href="assets/Canon1.svg" x="125.3" y="197.25" width="49.4" height="147.5"/>
-          <text class="demo-deg" x="320" y="300">0°</text>
         </svg>
       </div>
       <div class="narrator">
         <span class="who">NARRATOR:</span>
         <p class="line"></p>
-        <span class="hint">TAP TO START ▸</span>
+        <button type="button" id="lets-learn" hidden>LET’S LEARN ▸</button>
       </div>
     </section>
   </div>
 
   <!-- ============ Angle defence game ============ -->
   <div id="game">
-    <!-- top banner: prompt on the left, meteor counter + lives on the right -->
+    <!-- top banner: just the shared instruction panel (no corner counter) -->
     <div id="hud">
-      <p id="prompt">Read the protractor — which angle is the meteor coming in on?</p>
-      <div id="hud-stats">
-        <span id="round-label">Meteor 1 / 8</span>
-        <span id="lives" aria-label="Shields remaining"></span>
-        <button type="button" id="mute-btn" aria-label="Toggle sound">SOUND ON</button>
-      </div>
+      <p id="prompt" class="info-panel">Read the protractor — which angle is the meteor coming in on?</p>
     </div>
 
     <!-- play area: protractor rays, meteor, cannon -->
@@ -102,8 +100,10 @@
       <canvas id="fx-canvas" aria-hidden="true"></canvas>
       <div id="cannon">
         <img id="cannon-barrel" src="assets/Canon1.svg" alt="">
-        <img id="cannon-base" src="assets/Canon2.svg" alt="Cannon">
+        <img id="cannon-base" src="assets/Camnono.png" alt="Cannon">
       </div>
+      <!-- shield lamps: ground level, clear of every meteor approach path -->
+      <span id="lives" aria-label="Shields remaining"></span>
     </div>
 
     <!-- answer pad -->
@@ -112,11 +112,36 @@
     <!-- full-screen red wash when the cannon takes a hit -->
     <div id="damage-flash" aria-hidden="true"></div>
 
-    <!-- end-of-run overlay -->
-    <div id="result" class="hide">
-      <h2 id="result-title">Mission complete</h2>
-      <p id="result-text"></p>
-      <button type="button" id="again-btn">PLAY AGAIN</button>
+    <!-- end-of-run scoreboard — same splash design as the start screen -->
+    <div id="result" class="splash hide">
+      <div class="splash-hills" aria-hidden="true"></div>
+      <img class="splash-comet" src="assets/comet.svg" alt="" aria-hidden="true">
+      <i class="splash-star s1"></i><i class="splash-star s2"></i><i class="splash-star s3"></i>
+      <i class="splash-star s4"></i><i class="splash-star s5"></i>
+      <h2 id="result-title" class="splash-title">MISSION COMPLETE</h2>
+      <p id="result-text" class="splash-sub"></p>
+      <div class="splash-stats">
+        <div class="splash-stat"><b id="stat-hits">0</b><span>METEORS DOWN</span></div>
+        <div class="splash-stat"><b id="stat-shields">0</b><span>SHIELDS LEFT</span></div>
+      </div>
+      <svg class="splash-cannon" viewBox="20 190 260 145" aria-hidden="true">
+        <path class="fc-arc" d="M 30 330 A 120 120 0 0 1 270 330" fill="none"/>
+        <g class="fc-ticks">
+          <line x1="262" y1="330" x2="274" y2="330"/>
+          <line x1="247" y1="274" x2="257.4" y2="268"/>
+          <line x1="206" y1="233" x2="212" y2="222.6"/>
+          <line x1="150" y1="218" x2="150" y2="206"/>
+          <line x1="94" y1="233" x2="88" y2="222.6"/>
+          <line x1="53" y1="274" x2="42.6" y2="268"/>
+          <line x1="38" y1="330" x2="26" y2="330"/>
+        </g>
+        <path class="fc-disc" d="M 70 330 A 80 80 0 0 1 230 330 Z"/>
+        <path class="fc-ring" d="M 95 330 A 55 55 0 0 1 205 330" fill="none"/>
+        <image href="assets/Camnono.png" x="46.4" y="194.8" width="207.1" height="143.8"/>
+        <image href="assets/Canon1.svg" x="125.3" y="197.25" width="49.4" height="147.5"/>
+      </svg>
+      <button type="button" id="again-btn" class="splash-btn">PLAY AGAIN ▸</button>
+      <p class="splash-tap">✦&nbsp; Tap to fly again &nbsp;✦</p>
     </div>
   </div>
 
@@ -128,25 +153,5 @@
   <script src="js/intro.js"></script>
   <script src="js/lesson.js"></script>
   <script src="js/start-screen.js"></script>
-  <script>
-    (function () {
-      const b = document.getElementById('mute-btn');
-      const slot = document.getElementById('hud-stats');
-      document.body.appendChild(b);
-      document.getElementById('start-btn').addEventListener('click', () => slot.appendChild(b));
-      window.addEventListener('keydown', function once(e) {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        window.removeEventListener('keydown', once);
-        slot.appendChild(b);
-      });
-      const paint = () => {
-        const m = SFX.isMuted();
-        b.textContent = m ? 'SOUND OFF' : 'SOUND ON';
-        b.classList.toggle('off', m);
-      };
-      b.addEventListener('click', () => { SFX.toggleMute(); paint(); });
-      paint();
-    })();
-  </script>
 </body>
 </html>

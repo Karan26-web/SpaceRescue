@@ -24,8 +24,7 @@ window.SFX = (function () {
   let thrustGain = null, thrustFilter = null, thrustLevel = 0;
   const loops = {};
 
-  try { muted = localStorage.getItem(STORE_KEY) === '1'; } catch (e) {}
-
+  /* sound is always on — no persisted mute state is read any more */
   const baseLevel = () => (muted ? 0 : 0.5);
   const vary = (amt) => 1 + (Math.random() * 2 - 1) * amt;   // ±amt
 
@@ -244,6 +243,22 @@ window.SFX = (function () {
       const t = ctx.currentTime;
       burst(0.32, 'bandpass', 500, 2400, 0.11, t, 1.3);
       tone('sine', 300, 700, t, 0.28, 0.07);
+    },
+    /* earned card drops from the stage into the tray: falling air + pitch drop
+       (the landing itself is pop(), fired by the animation's finish handler) */
+    swoosh() {
+      if (!ensure()) return;
+      const t = ctx.currentTime;
+      burst(0.6, 'bandpass', 2200 * vary(0.06), 320, 0.16, t, 1.2);
+      tone('sine', 620 * vary(0.05), 170, t + 0.05, 0.5, 0.07);
+    },
+    /* camera snap: the moment a learned angle is captured into the tray */
+    shutter() {
+      if (!ensure()) return;
+      const t = ctx.currentTime;
+      burst(0.035, 'highpass', 5200, 5200, 0.22, t);          // click
+      tone('square', 330, 180, t + 0.02, 0.05, 0.09);         // mechanical clack
+      burst(0.05, 'bandpass', 1400, 850, 0.12, t + 0.05, 2);
     },
 
     /* ---------- 05 cannon swings to bearing ---------- */

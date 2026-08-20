@@ -1,6 +1,6 @@
 /* Space Rescue — narrated intro: three story cards between START and the
-   mission. Click / Enter / Space advances (first tap fast-forwards the
-   typewriter, next tap turns the card); SKIP jumps straight into the game.
+   mission. Cards play themselves: each line types out, holds for a beat,
+   then the next card slides in — no taps needed. SKIP jumps straight ahead.
    Every slide arms its own scene animation and a sound cue synthesized by
    SFX — no new audio assets. */
 (function () {
@@ -8,6 +8,7 @@
   if (!root) return;
   const slides = Array.from(root.querySelectorAll('.slide'));
   const skipBtn = document.getElementById('intro-skip');
+  const learnBtn = document.getElementById('lets-learn');
 
   const LINES = [
     'Far above Earth, a meteor shower is heading straight for our space station!',
@@ -16,7 +17,8 @@
   ];
 
   let idx = -1, onDone = null, active = false;
-  let typeTimer = 0, typing = false;
+  let typeTimer = 0, typing = false, autoTimer = 0;
+  const HOLD_MS = 3800;   // dwell after the line finishes typing
   let sweepTimer = 0, demoRaf = 0;
 
   /* per-slide sound direction:
@@ -37,14 +39,18 @@
     }
   ];
 
-  function typeInto(el, text) {
+  function typeInto(el, text, done) {
     clearInterval(typeTimer);
     typing = true;
     el.textContent = '';
     let i = 0;
     typeTimer = setInterval(() => {
       el.textContent = text.slice(0, ++i);
-      if (i >= text.length) { clearInterval(typeTimer); typing = false; }
+      if (i >= text.length) {
+        clearInterval(typeTimer);
+        typing = false;
+        if (done) done();
+      }
     }, 24);
   }
 
@@ -59,20 +65,18 @@
     if (i >= slides.length) return finish();
     idx = i;
     slides.forEach((s, k) => s.classList.toggle('on', k === i));
-    typeInto(slides[i].querySelector('.line'), LINES[i]);
+    clearTimeout(autoTimer);
+    // cards play themselves: type the line, dwell, move on — except the
+    // last one, which waits on the LET'S LEARN call-to-action
+    typeInto(slides[i].querySelector('.line'), LINES[i], () => {
+      if (i === slides.length - 1) {
+        learnBtn.hidden = false;
+        SFX.pop();
+      } else {
+        autoTimer = setTimeout(() => { if (active && idx === i) show(i + 1); }, HOLD_MS);
+      }
+    });
     CUES[i]();
-  }
-
-  function advance() {
-    if (!active) return;
-    if (typing) {                       // first tap: reveal the full line
-      clearInterval(typeTimer);
-      typing = false;
-      slides[idx].querySelector('.line').textContent = LINES[idx];
-      return;
-    }
-    SFX.tap();
-    show(idx + 1);
   }
 
   function finish() {
@@ -80,6 +84,7 @@
     active = false;
     leave(idx);
     clearInterval(typeTimer);
+    clearTimeout(autoTimer);
     root.classList.add('hide');
     root.addEventListener('transitionend', () => root.remove(), { once: true });
     window.removeEventListener('keydown', onKey);
@@ -88,12 +93,7 @@
 
   function onKey(e) {
     if (!active) return;
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      advance();
-    } else if (e.key === 'Escape') {
-      finish();
-    }
+    if (e.key === 'Escape') finish();
   }
 
   /* --- hook 3: the ray sweeps up to 60°, arc + readout grow with it, the
@@ -102,7 +102,6 @@
     const svg = document.getElementById('angle-demo');
     const ray = svg.querySelector('.demo-ray');
     const arc = svg.querySelector('.demo-arc');
-    const deg = svg.querySelector('.demo-deg');
     const barrel = svg.querySelector('.demo-barrel');
     const PX = 150, PY = 330, R = 120, LEN = 340, TARGET = 60;
     const t0 = performance.now();
@@ -118,19 +117,20 @@
       ray.setAttribute('y2', PY - Math.sin(r) * LEN);
       arc.setAttribute('d',
         `M ${PX + R} ${PY} A ${R} ${R} 0 0 0 ${PX + Math.cos(r) * R} ${PY - Math.sin(r) * R}`);
-      const mid = r / 2;
-      deg.setAttribute('x', PX + Math.cos(mid) * (R + 48));
-      deg.setAttribute('y', PY - Math.sin(mid) * (R + 48) + 10);
-      deg.textContent = Math.round(a) + '°';
       // barrel art points up at rest — same bearing mapping as the game
       barrel.setAttribute('transform', `rotate(${90 - a} ${PX} ${PY})`);
     })(t0);
   }
 
-  root.addEventListener('click', advance);
   skipBtn.addEventListener('click', e => {
     e.stopPropagation();
     SFX.tap();
+    finish();
+  });
+
+  learnBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    SFX.good();
     finish();
   });
 
