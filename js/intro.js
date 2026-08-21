@@ -11,6 +11,7 @@
   const slides = Array.from(root.querySelectorAll('.slide'));
   const skipBtn = document.getElementById('intro-skip');
   const learnBtn = document.getElementById('lets-learn');
+  const backBtn = document.getElementById('intro-back');
 
   const LINES = [
     'A group of asteroids is heading towards our planet.',
@@ -67,9 +68,19 @@
   function show(i) {
     if (idx >= 0) leave(idx);
     if (i >= slides.length) return finish();
+    VO.stop();                       // silence any line still playing
     idx = i;
     const my = ++seq;
-    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    backBtn.hidden = i === 0;        // nothing before the first card
+    learnBtn.hidden = true;          // re-earned when the last card settles
+    slides.forEach((s, k) => {
+      s.classList.toggle('on', k === i);
+      if (k !== i) {                 // reset spotlight state on cards we left
+        s.classList.remove('dim');
+        s.querySelectorAll('.focus').forEach(el => el.classList.remove('focus'));
+        s.querySelector('.narrator').classList.remove('speaking');
+      }
+    });
     clearTimeout(autoTimer);
     const line = slides[i].querySelector('.line');
     const card = slides[i].querySelector('.narrator');
@@ -115,6 +126,10 @@
   function onKey(e) {
     if (!active) return;
     if (e.key === 'Escape') finish();
+    if (e.key === 'ArrowLeft' && !backBtn.hidden) {
+      e.preventDefault();
+      backBtn.click();
+    }
     if ((e.key === 'Enter' || e.key === ' ') && !learnBtn.hidden) {
       e.preventDefault();
       finish();
@@ -151,6 +166,13 @@
     e.stopPropagation();
     SFX.tap();
     finish();
+  });
+
+  backBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (!active || idx <= 0) return;
+    SFX.tap();
+    show(idx - 1);
   });
 
   learnBtn.addEventListener('click', e => {

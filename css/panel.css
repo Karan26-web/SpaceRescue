@@ -114,6 +114,44 @@
   }
 }
 
+/* ============ shared icon back button ============
+   Mirror of .nav-next, pinned bottom-left. Deliberately quieter — muted
+   slate gradient, no pulse — so "forward" stays the primary action. */
+.nav-back {
+  position: absolute;
+  left: clamp(22px, 3.5vw, 48px);
+  bottom: clamp(22px, 4.5vh, 48px);
+  z-index: 8;
+  width: clamp(52px, 5.8vw, 68px);
+  height: clamp(52px, 5.8vw, 68px);
+  padding: 0;
+  cursor: pointer;
+  border: 3.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #45549e 0%, #2a3577 100%);
+  box-shadow:
+    inset 0 -0.25em 0 rgba(12, 20, 66, 0.55),
+    0 8px 16px rgba(5, 8, 30, 0.4);
+  transition: transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-back::before {
+  content: "";
+  display: block;
+  margin: 0 auto;
+  width: 36%;
+  height: 42%;
+  background: #ffffff;
+  clip-path: polygon(94% 0, 0 50%, 94% 100%);
+  transform: translateX(-9%);   /* optical centre for the left-pointing arrow */
+  filter: drop-shadow(0 2px 0 rgba(14, 24, 70, 0.4));
+}
+
+.nav-back:hover { transform: translateY(-2px) scale(1.05); }
+.nav-back:active { transform: translateY(2px); }
+.nav-back[hidden] { display: none; }
+
 /* accent bar heartbeat while the VoiceOver is reading the panel's line */
 @keyframes accent-speak {
   0%, 100% { opacity: 1; }

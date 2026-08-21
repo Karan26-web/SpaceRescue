@@ -63,6 +63,7 @@
       </svg>
       <div id="lesson-zones"></div>
     </div>
+    <button type="button" id="lesson-back" class="nav-back" hidden aria-label="Back"></button>
     <button type="button" id="lesson-next" class="nav-next" hidden aria-label="Continue"></button>
     <div id="lesson-footer">
       <div id="lesson-chips"></div>
@@ -99,6 +100,7 @@
   const $ = id => root.querySelector('#' + id);
   const sayLine = root.querySelector('#lesson-say .line');
   const nextBtn = $('lesson-next');
+  const backBtn = $('lesson-back');
   const stage = $('lesson-stage');
   const E = {
     refs: $('ls-refs'), arc: $('ls-arc'), corner: $('ls-corner'),
@@ -1069,10 +1071,29 @@
     typeDone = voDone = false;
     sayBox.classList.remove('task');
     const s = SLIDES[idx];
+    // no back on the first slide or on the final splash (it owns the exit)
+    backBtn.hidden = idx === 0 || !!s.final;
     syncChips(s.chips);
     s.go();
     if (s.text) narrate(s.text);
   }
+
+  /* step back one slide: every slide's go() rebuilds its scene from
+     scratch, so replaying the previous one restores it faithfully */
+  function goBack() {
+    if (!active || idx <= 0) return;
+    clearTimeout(autoTimer);
+    hideNext();
+    VO.stop();
+    clearInterval(typeTimer);
+    typing = false;
+    dragCfg = null;                       // release any live drag activity
+    stage.classList.remove('draggable');
+    SFX.tap();
+    idx -= 2;
+    next();
+  }
+  backBtn.addEventListener('click', e => { e.stopPropagation(); goBack(); });
 
   /* a tap is only ever "get on with this line": first tap completes the
      typing, a second skips the rest of the VoiceOver. Moving between
@@ -1105,6 +1126,11 @@
 
   function onKey(e) {
     if (!active) return;
+    if (e.key === 'ArrowLeft' && !backBtn.hidden) {
+      e.preventDefault();
+      goBack();
+      return;
+    }
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
       e.preventDefault();
       if (!nextBtn.hidden) nextBtn.click();
