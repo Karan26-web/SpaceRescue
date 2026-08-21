@@ -14,7 +14,8 @@
   user-select: none;     /* drags must never highlight the UI text */
 }
 
-/* the full-screen neon teaching board — everything sits on it */
+/* the full-screen neon teaching board — everything sits on it:
+   graph-paper grid lines over a calm nebula wash and indigo gradient */
 #lesson-board {
   position: absolute;
   inset: 12px;
@@ -23,6 +24,7 @@
     radial-gradient(120% 90% at 50% 0%, rgba(80, 110, 210, 0.22), transparent 60%),
     repeating-linear-gradient(0deg, rgba(105, 150, 235, 0.13) 0 1.5px, transparent 1.5px 52px),
     repeating-linear-gradient(90deg, rgba(105, 150, 235, 0.13) 0 1.5px, transparent 1.5px 52px),
+    radial-gradient(70% 55% at 18% 88%, rgba(120, 80, 200, 0.16), transparent 70%),
     linear-gradient(180deg, #162462 0%, #101c50 100%);
   box-shadow: inset 0 0 90px rgba(4, 8, 34, 0.6);
   pointer-events: none;
@@ -110,10 +112,15 @@
   margin: 0;
   align-self: center;
   color: #1e2a66;
-  font-size: clamp(1.05rem, 2.2vw, 1.55rem);
+  font-size: clamp(1.15rem, 2.5vw, 1.75rem);
   font-weight: 800;
   line-height: 1.3;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* accent bar heartbeat while the VoiceOver reads the line */
+#lesson-say.speaking .say-inner::before {
+  animation: accent-speak 0.9s ease-in-out infinite;
 }
 
 #lesson-say .hint {
@@ -156,12 +163,16 @@
   pointer-events: none;   /* only the chips themselves take input */
 }
 
-#drag-dock h4 {
-  margin: 0 0 2px;
-  color: #8fa2e8;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
+/* wrong drop: the chip lands, shakes its head where it was dropped
+   (--dx/--dy hold the drop offset), then transitions back home */
+#drag-dock .lesson-drag.shake {
+  animation: drag-shake 0.48s ease;
+}
+
+@keyframes drag-shake {
+  0%, 100% { transform: translate(var(--dx), var(--dy)); }
+  20%, 60% { transform: translate(calc(var(--dx) - 9px), var(--dy)) rotate(-4deg); }
+  40%, 80% { transform: translate(calc(var(--dx) + 9px), var(--dy)) rotate(4deg); }
 }
 
 #drag-dock .lesson-drag {
@@ -220,6 +231,12 @@
   filter: drop-shadow(0 0 6px rgba(255, 205, 80, 0.65));
 }
 
+/* per-target hues: each slot and its arrow share a colour so the pairs
+   read at a glance — gold = angle, cyan = arms, pink = vertex */
+.ls-leader--gold { stroke: #ffd75e; filter: drop-shadow(0 0 6px rgba(255, 205, 80, 0.65)); }
+.ls-leader--cyan { stroke: #5fd6ff; filter: drop-shadow(0 0 6px rgba(95, 214, 255, 0.6)); }
+.ls-leader--pink { stroke: #e88bff; filter: drop-shadow(0 0 6px rgba(232, 139, 255, 0.6)); }
+
 .ls-leader.done {
   stroke: #57c46b;
   stroke-dasharray: none;
@@ -269,19 +286,27 @@
 
 .ls-callout {
   fill: #ffffff;
-  font-size: 40px;
+  font-size: 46px;
   font-weight: 800;
 }
 
-/* quiz cards */
+/* bowed label arrow — rounded, softly glowing, sleeker than a bare line */
+.ls-callout-arrow {
+  stroke: #ffd75e;
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(255, 205, 80, 0.55));
+}
+
+/* quiz cards — soft indigo gradient panels, big tappable targets */
 .ls-card { cursor: pointer; }
 .ls-card rect {
-  fill: rgba(18, 22, 44, 0.88);
-  stroke: rgba(140, 160, 255, 0.25);
-  stroke-width: 2;
+  fill: url(#lg-card);
+  stroke: rgba(140, 160, 255, 0.3);
+  stroke-width: 2.5;
   transition: stroke 0.2s ease;
 }
-.ls-card:hover rect { stroke: rgba(140, 160, 255, 0.7); }
+.ls-card:hover rect { stroke: rgba(140, 160, 255, 0.75); }
 .ls-card.right rect { stroke: #7ef06e; stroke-width: 5; }
 .ls-card.wrong rect { stroke: #ff5f54; stroke-width: 5; }
 
@@ -295,6 +320,16 @@
   stroke-width: 6;
 }
 
+/* wrong comparison pick: the arcs — the turn to compare — call attention */
+.ls-mini-arc.flash {
+  animation: arc-attention 0.85s ease-in-out infinite;
+}
+
+@keyframes arc-attention {
+  0%, 100% { stroke: rgba(233, 236, 248, 0.85); stroke-width: 6; }
+  50%      { stroke: #ffd75e; stroke-width: 10; }
+}
+
 .ls-recap-name {
   fill: #ffd75e;
   font-size: 30px;
@@ -302,16 +337,19 @@
   text-anchor: middle;
 }
 
-/* --- recap: interactive angle-explorer disc --- */
+/* --- recap: interactive angle-explorer disc — a translucent indigo dial
+   with a glowing rim, in the board's own palette (no more white slab) --- */
 .ae-disc {
-  fill: #ffffff;
-  filter: drop-shadow(0 12px 32px rgba(3, 10, 40, 0.55));
+  fill: rgba(30, 42, 104, 0.85);
+  stroke: rgba(130, 165, 255, 0.5);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 34px rgba(70, 115, 235, 0.4));
 }
-.ae-cross { stroke: rgba(35, 48, 124, 0.16); stroke-width: 2.5; }
-#ae-fill { fill: rgba(255, 176, 82, 0.32); }
+.ae-cross { stroke: rgba(165, 190, 255, 0.22); stroke-width: 2.5; }
+#ae-fill { fill: rgba(255, 176, 82, 0.3); }
 #ae-arc { stroke: #ff9f2e; stroke-width: 7; stroke-linecap: round; }
-.ae-ray { stroke: #f5a623; stroke-width: 11; stroke-linecap: round; }
-.ae-hub { fill: #ffffff; stroke: #4a6cf0; stroke-width: 6; }
+.ae-ray { stroke: #ffb340; stroke-width: 11; stroke-linecap: round; }
+.ae-hub { fill: #101c50; stroke: #8fb4ff; stroke-width: 6; }
 
 #ae-handle {
   fill: #ffb340;
@@ -341,6 +379,8 @@
   pointer-events: none;
 }
 
+/* drop capsule: a soft glowing pill instead of a dashed box — a quiet "?"
+   marks it as an empty home until a label lands */
 .lesson-zone {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -348,24 +388,76 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 165px;
-  padding: 0.65em 1em;
-  border: 3px dashed #ffd75e;
-  border-radius: 12px;
-  background: rgba(18, 24, 56, 0.6);
-  color: rgba(255, 215, 94, 0.8);
+  min-width: 150px;
+  padding: 0.55em 1em;
+  border: 2.5px solid rgba(136, 190, 255, 0.55);
+  border-radius: 999px;
+  background: radial-gradient(120% 160% at 50% 0%,
+    rgba(70, 96, 190, 0.45), rgba(28, 38, 92, 0.6));
+  box-shadow:
+    inset 0 0 16px rgba(90, 140, 255, 0.22),
+    0 0 14px rgba(80, 140, 255, 0.28);
+  color: rgba(190, 210, 255, 0.85);
   font-weight: 800;
-  font-size: clamp(0.72rem, 1.25vw, 0.9rem);
-  letter-spacing: 0.14em;
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
   text-align: center;
 }
+.lesson-zone::before { content: none; }
+
+/* capsule tinted to its leader's hue */
+.lesson-zone.tint-gold {
+  border-color: rgba(255, 215, 94, 0.6);
+  color: rgba(255, 222, 140, 0.9);
+  box-shadow:
+    inset 0 0 16px rgba(255, 200, 80, 0.16),
+    0 0 14px rgba(255, 195, 70, 0.3);
+}
+.lesson-zone.tint-cyan {
+  border-color: rgba(95, 214, 255, 0.6);
+  color: rgba(165, 228, 255, 0.9);
+  box-shadow:
+    inset 0 0 16px rgba(95, 214, 255, 0.18),
+    0 0 14px rgba(95, 214, 255, 0.3);
+}
+.lesson-zone.tint-pink {
+  border-color: rgba(232, 139, 255, 0.6);
+  color: rgba(242, 185, 255, 0.92);
+  box-shadow:
+    inset 0 0 16px rgba(232, 139, 255, 0.16),
+    0 0 14px rgba(232, 139, 255, 0.28);
+}
+
 .lesson-zone.filled {
-  border-style: solid;
   border-color: #57c46b;
-  background: rgba(214, 247, 221, 0.95);
+  background: linear-gradient(180deg, #eafff0 0%, #c9f3d2 100%);
+  box-shadow: 0 0 18px rgba(87, 196, 107, 0.45);
   color: #14672f;
   font-size: clamp(0.9rem, 1.6vw, 1.1rem);
-  letter-spacing: 0.02em;
+  animation: zone-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes zone-pop {
+  from { transform: translate(-50%, -50%) scale(0.75); }
+}
+
+/* celebratory sparkles when a label lands in the right capsule */
+.zone-spark {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  color: #ffd75e;
+  font-size: 24px;
+  text-shadow: 0 0 10px rgba(255, 205, 80, 0.9);
+  animation: zone-spark 0.75s ease-out forwards;
+}
+.zone-spark::before { content: "✦"; }
+
+@keyframes zone-spark {
+  from { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+  to {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15);
+    opacity: 0;
+  }
 }
 
 .lesson-drag {
@@ -402,6 +494,10 @@
   0%, 100% { transform: translate(-30%, -6%) rotate(-14deg); }
   50%      { transform: translate(calc(-30% + 30px), calc(-6% + 24px)) rotate(12deg); }
 }
+
+/* the drag-demo hand is driven by a WAAPI script animation — the CSS
+   nudge loop must not fight it over `transform` */
+.lesson-hand.demo { animation: none; }
 
 #lesson-link {
   position: absolute;

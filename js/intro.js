@@ -1,8 +1,10 @@
 /* Space Rescue — narrated intro: three story cards between START and the
-   mission. Cards play themselves: each line types out, holds for a beat,
-   then the next card slides in — no taps needed. SKIP jumps straight ahead.
-   Every slide arms its own scene animation and a sound cue synthesized by
-   SFX — no new audio assets. */
+   lesson. Strict sequencing per card: the scene lands first, then the
+   VoiceOver + typed line play together while the relevant visual is
+   spotlighted (rest of the screen dims), then a beat of hold before the
+   next card. Only after the last card completes does the icon nav button
+   appear, bottom-right, gently pulsing. SKIP jumps straight ahead.
+   Every slide arms its own scene animation and a synthesized SFX cue. */
 (function () {
   const root = document.getElementById('intro');
   if (!root) return;
@@ -11,14 +13,18 @@
   const learnBtn = document.getElementById('lets-learn');
 
   const LINES = [
-    'Far above Earth, a meteor shower is heading straight for our space station!',
-    'Our defence cannon can stop them—but first, we need to get its aim just right.',
-    'And for that, we’ll need angles.'
+    'A group of asteroids is heading towards our planet.',
+    'We must use our cannon to shoot them down.',
+    'To use the cannon correctly, you need to know different types of angles.'
   ];
+  /* the element(s) each line is about — spotlighted while it plays */
+  const FOCUS = ['.intro-meteor', '.intro-cannon', '#angle-demo'];
 
-  let idx = -1, onDone = null, active = false;
-  let typeTimer = 0, typing = false, autoTimer = 0;
-  const HOLD_MS = 3800;   // dwell after the line finishes typing
+  const SCENE_BEAT = 700;   // scene lands, breathes, THEN the narration starts
+  const HOLD_MS = 1900;     // dwell after line + VoiceOver both finish
+
+  let idx = -1, onDone = null, active = false, seq = 0;
+  let typeTimer = 0, autoTimer = 0;
   let sweepTimer = 0, demoRaf = 0;
 
   /* per-slide sound direction:
@@ -41,17 +47,15 @@
 
   function typeInto(el, text, done) {
     clearInterval(typeTimer);
-    typing = true;
     el.textContent = '';
     let i = 0;
     typeTimer = setInterval(() => {
       el.textContent = text.slice(0, ++i);
       if (i >= text.length) {
         clearInterval(typeTimer);
-        typing = false;
         if (done) done();
       }
-    }, 24);
+    }, 30);
   }
 
   function leave(i) {
@@ -64,25 +68,42 @@
     if (idx >= 0) leave(idx);
     if (i >= slides.length) return finish();
     idx = i;
+    const my = ++seq;
     slides.forEach((s, k) => s.classList.toggle('on', k === i));
     clearTimeout(autoTimer);
-    // cards play themselves: type the line, dwell, move on — except the
-    // last one, which waits on the LET'S LEARN call-to-action
-    typeInto(slides[i].querySelector('.line'), LINES[i], () => {
-      if (i === slides.length - 1) {
-        learnBtn.hidden = false;
-        SFX.pop();
-      } else {
-        autoTimer = setTimeout(() => { if (active && idx === i) show(i + 1); }, HOLD_MS);
-      }
-    });
+    const line = slides[i].querySelector('.line');
+    const card = slides[i].querySelector('.narrator');
+    line.textContent = '';
     CUES[i]();
+    // 1: the scene appears and settles
+    autoTimer = setTimeout(() => {
+      if (!active || seq !== my) return;
+      // 2: spotlight the subject, dim the rest, speak + type the line
+      slides[i].classList.add('dim');
+      slides[i].querySelectorAll(FOCUS[i]).forEach(el => el.classList.add('focus'));
+      card.classList.add('speaking');
+      let typed = false, spoken = false;
+      const settle = () => {
+        if (!typed || !spoken || !active || seq !== my) return;
+        card.classList.remove('speaking');
+        // 3: everything has landed — open the next step
+        if (i === slides.length - 1) {
+          learnBtn.hidden = false;
+          SFX.pop();
+        } else {
+          autoTimer = setTimeout(() => { if (active && seq === my) show(i + 1); }, HOLD_MS);
+        }
+      };
+      typeInto(line, LINES[i], () => { typed = true; settle(); });
+      VO.say(LINES[i], () => { spoken = true; settle(); });
+    }, SCENE_BEAT);
   }
 
   function finish() {
     if (!active) return;
     active = false;
     leave(idx);
+    VO.stop();
     clearInterval(typeTimer);
     clearTimeout(autoTimer);
     root.classList.add('hide');
@@ -94,6 +115,10 @@
   function onKey(e) {
     if (!active) return;
     if (e.key === 'Escape') finish();
+    if ((e.key === 'Enter' || e.key === ' ') && !learnBtn.hidden) {
+      e.preventDefault();
+      finish();
+    }
   }
 
   /* --- hook 3: the ray sweeps up to 60°, arc + readout grow with it, the

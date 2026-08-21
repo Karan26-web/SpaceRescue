@@ -18,6 +18,9 @@
   align-items: center;
   gap: 10px;
   margin: 18px 22px 0;
+  /* stays readable above the tutorial dim layer (z 6) */
+  position: relative;
+  z-index: 7;
 }
 
 #prompt {
@@ -84,6 +87,76 @@
   z-index: 4;
 }
 
+/* --- Tutorial spotlight --- */
+/* dim wash over the whole game; spotlighted elements are lifted above it */
+#tutorial-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: rgba(4, 8, 28, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+#tutorial-dim.on { opacity: 1; }
+
+/* the element the VoiceOver is talking about: raised over the dim layer
+   with a soft pulsing halo so it reads as "look here" */
+.spot {
+  z-index: 7;
+  animation: spot-pulse 1.5s ease-in-out infinite;
+}
+
+#options.spot { position: relative; }   /* static box needs a position for z */
+
+@keyframes spot-pulse {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 214, 94, 0.55)); }
+  50%      { filter: drop-shadow(0 0 30px rgba(255, 214, 94, 0.95)); }
+}
+
+/* --- approach line + angle arc --- */
+/* dotted tether pivot → asteroid: marching dashes for urgency, fades in
+   the moment the asteroid enters the screen */
+#approach-line {
+  animation: ray-fade-in 0.5s ease, dash-march 0.55s linear infinite;
+}
+
+#angle-arc { animation: ray-fade-in 0.5s ease; }
+
+@keyframes ray-fade-in { from { opacity: 0; } }
+
+/* dasharray is 10 9 → one full period is 19px */
+@keyframes dash-march { to { stroke-dashoffset: -19px; } }
+
+/* targeted feedback: the relevant angle glows and pulses while the
+   VoiceOver names its type */
+#angle-arc.highlight {
+  animation: arc-pulse 0.9s ease-in-out infinite;
+}
+
+#approach-line.highlight {
+  animation: dash-march 0.55s linear infinite, arc-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes arc-pulse {
+  0%, 100% { stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(255, 212, 94, 0.9)); }
+  50%      { stroke-width: 6.5; filter: drop-shadow(0 0 16px rgba(255, 212, 94, 1)); }
+}
+
+/* type name that pops beside the highlighted arc */
+.angle-callout {
+  fill: #ffd45e;
+  font-size: 26px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(10, 16, 56, 0.85);
+  stroke-width: 5px;
+  animation: callout-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes callout-pop { from { opacity: 0; } }
+
 #meteor {
   position: absolute;
   left: 0;
@@ -149,6 +222,31 @@
   transform-origin: 50% 90%;
   transform: translateX(-50%) rotate(0deg);
   transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+/* a hit cannon chars, keels over and sinks — one life gone */
+#cannon.destroyed {
+  animation: cannon-destroy 0.8s ease-in forwards;
+}
+
+@keyframes cannon-destroy {
+  0%   { transform: translateX(-50%); filter: none; opacity: 1; }
+  25%  { filter: brightness(1.8) saturate(0.5); }
+  100% {
+    transform: translateX(-50%) translateY(45%) rotate(9deg);
+    filter: brightness(0.3) saturate(0.15);
+    opacity: 0;
+  }
+}
+
+/* the replacement cannon rides up from below the screen into position */
+#cannon.respawn {
+  animation: cannon-respawn 0.9s cubic-bezier(0.22, 0.9, 0.32, 1.06) forwards;
+}
+
+@keyframes cannon-respawn {
+  from { transform: translateX(-50%) translateY(115%); }
+  to   { transform: translateX(-50%) translateY(0); }
 }
 
 /* cannon bolt */
@@ -392,9 +490,10 @@ body.pre-start #game {
   flex-direction: column;
   align-items: center;
   margin: 0;
-  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
-  font-weight: 900;
-  line-height: 1.02;
+  /* display face: Baloo 2 (Google Fonts) with the old stack as offline fallback */
+  font-family: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  font-weight: 800;
+  line-height: 0.98;
   color: #ffffff;
   text-shadow:
     0 2px 0 #dcdaf7,                        /* lavender underside, darkening */
@@ -453,27 +552,21 @@ body.pre-start #game {
   background: linear-gradient(90deg, #a5ecff, transparent);
 }
 
-/* Start button: chunky cartoon pill — coral red body, thick white ring,
-   darker bottom lip for the 3D toy look, yellow accent ticks above corners */
+/* Start button: icon-only — a chunky round coral play button with a thick
+   white ring and yellow emphasis ticks, sized and centred for balance */
 #start-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.7em;
   cursor: pointer;
-  margin-top: 9vh;
-  padding: 0.85em 1.9em 1em;
-  min-width: clamp(190px, 21vw, 280px);
+  margin-top: 8vh;
+  width: clamp(96px, 11vw, 140px);
+  height: clamp(96px, 11vw, 140px);
+  padding: 0;
   border: 6px solid #ffffff;
-  border-radius: 999px;
+  border-radius: 50%;
   background: linear-gradient(180deg, #f8867e 0%, #f06c63 45%, #ea5b53 100%);
-  font-family: "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
-  font-size: clamp(1.3rem, 2.8vw, 1.9rem);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: #ffffff;
-  text-shadow: 0 2px 0 rgba(178, 52, 48, 0.5);
   box-shadow:
     inset 0 -0.45em 0 rgba(183, 55, 62, 0.55),  /* darker bottom lip */
     inset 0 0.3em 0.35em rgba(255, 255, 255, 0.3), /* top highlight */
@@ -481,16 +574,23 @@ body.pre-start #game {
     0 12px 24px rgba(8, 12, 36, 0.45);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  animation: start-breathe 2.2s ease-in-out infinite;
 }
 
-/* white play triangle */
+/* white play triangle, optically centred */
 #start-btn::before {
   content: "";
-  width: 0.8em;
-  height: 0.95em;
+  width: 38%;
+  height: 44%;
   background: #ffffff;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  clip-path: polygon(6% 0, 100% 50%, 6% 100%);
+  transform: translateX(9%);
   filter: drop-shadow(0 2px 0 rgba(178, 52, 48, 0.5));
+}
+
+@keyframes start-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
 }
 
 /* yellow emphasis ticks bursting above each corner */

@@ -89,6 +89,8 @@
 .splash-title {
   margin: 0;
   color: #ffffff;
+  font-family: "Baloo 2", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+  font-weight: 800;
   font-size: clamp(2.4rem, 7.5vw, 5.2rem);
   letter-spacing: 0.03em;
   text-shadow:
@@ -112,8 +114,9 @@
 }
 .fc-arc { stroke: #f5a623; stroke-width: 4; opacity: 0.9; }
 .fc-ticks line { stroke: #f5a623; stroke-width: 3.5; opacity: 0.8; }
-.fc-disc { fill: #edf1fb; }
-.fc-ring { stroke: #d5dcf0; stroke-width: 3; }
+/* protractor mount in the scene's own palette — no flat white slab */
+.fc-disc { fill: rgba(46, 58, 132, 0.85); stroke: rgba(150, 175, 255, 0.45); stroke-width: 2.5; }
+.fc-ring { stroke: rgba(150, 175, 255, 0.4); stroke-width: 3; }
 
 /* --- score readout (end-of-run) --- */
 .splash-stats {

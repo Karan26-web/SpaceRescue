@@ -56,3 +56,72 @@
   border-radius: 999px;
   background: var(--panel-accent);
 }
+
+/* ============ shared icon nav button ============
+   The single "continue" control across the whole game: a round arrow
+   button pinned to the bottom-right, outside the instruction bar, with a
+   subtle pulsing glow. Used by the intro (#lets-learn) and the lesson
+   (#lesson-next). */
+.nav-next {
+  position: absolute;
+  right: clamp(22px, 3.5vw, 48px);
+  bottom: clamp(22px, 4.5vh, 48px);
+  z-index: 8;
+  width: clamp(60px, 6.8vw, 80px);
+  height: clamp(60px, 6.8vw, 80px);
+  padding: 0;
+  cursor: pointer;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #57c8ff 0%, #2f7de0 100%);
+  box-shadow:
+    inset 0 -0.28em 0 rgba(23, 82, 160, 0.5),
+    0 8px 18px rgba(5, 8, 30, 0.4),
+    0 0 16px rgba(64, 170, 255, 0.45);
+  animation: nav-next-pulse 1.7s ease-in-out infinite;
+  transition: transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-next::before {
+  content: "";
+  display: block;
+  margin: 0 auto;
+  width: 38%;
+  height: 44%;
+  background: #ffffff;
+  clip-path: polygon(6% 0, 100% 50%, 6% 100%);
+  transform: translateX(9%);   /* optical centre for a play-style arrow */
+  filter: drop-shadow(0 2px 0 rgba(20, 60, 130, 0.4));
+}
+
+.nav-next:hover { transform: translateY(-2px) scale(1.05); }
+.nav-next:active { transform: translateY(2px); }
+.nav-next[hidden] { display: none; }
+
+@keyframes nav-next-pulse {
+  0%, 100% {
+    box-shadow:
+      inset 0 -0.28em 0 rgba(23, 82, 160, 0.5),
+      0 8px 18px rgba(5, 8, 30, 0.4),
+      0 0 10px rgba(64, 170, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      inset 0 -0.28em 0 rgba(23, 82, 160, 0.5),
+      0 8px 18px rgba(5, 8, 30, 0.4),
+      0 0 30px rgba(64, 170, 255, 0.85);
+  }
+}
+
+/* accent bar heartbeat while the VoiceOver is reading the panel's line */
+@keyframes accent-speak {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* the cannon's dome art (Camnono.png) is painted white — this shared tint
+   settles it into the scene's indigo palette wherever it appears */
+.dome-tint {
+  filter: brightness(0.8) sepia(0.9) saturate(2.6) hue-rotate(180deg);
+}

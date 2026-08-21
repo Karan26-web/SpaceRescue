@@ -22,7 +22,6 @@
     <div id="lesson-say">
       <div class="say-inner">
         <p class="line"></p>
-        <span class="hint">TAP TO CONTINUE ▸</span>
       </div>
     </div>
     <div id="lesson-scene">
@@ -32,8 +31,18 @@
             <path d="M1 1 L11 6 L1 11 Z" fill="#f4f6ff"/>
           </marker>
           <marker id="lm-y" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-            <path d="M1 1 L11 6 L1 11 Z" fill="#ffd75e"/>
+            <path d="M1.4 1.6 L11 6 L1.4 10.4 L4.2 6 Z" fill="#ffd75e"/>
           </marker>
+          <marker id="lm-c" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M1.4 1.6 L11 6 L1.4 10.4 L4.2 6 Z" fill="#5fd6ff"/>
+          </marker>
+          <marker id="lm-p" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M1.4 1.6 L11 6 L1.4 10.4 L4.2 6 Z" fill="#e88bff"/>
+          </marker>
+          <linearGradient id="lg-card" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#232e6e"/>
+            <stop offset="1" stop-color="#141b46"/>
+          </linearGradient>
           <marker id="lm-d" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M1 1 L11 6 L1 11 Z" fill="#23307c"/>
           </marker>
@@ -54,6 +63,7 @@
       </svg>
       <div id="lesson-zones"></div>
     </div>
+    <button type="button" id="lesson-next" class="nav-next" hidden aria-label="Continue"></button>
     <div id="lesson-footer">
       <div id="lesson-chips"></div>
       <div id="lesson-actions"></div>
@@ -78,7 +88,7 @@
         </g>
         <path class="fc-disc" d="M 70 330 A 80 80 0 0 1 230 330 Z"/>
         <path class="fc-ring" d="M 95 330 A 55 55 0 0 1 205 330" fill="none"/>
-        <image href="assets/Camnono.png" x="46.4" y="194.8" width="207.1" height="143.8"/>
+        <image class="dome-tint" href="assets/Camnono.png" x="46.4" y="194.8" width="207.1" height="143.8"/>
         <image href="assets/Canon1.svg" x="125.3" y="197.25" width="49.4" height="147.5"/>
       </svg>
       <button type="button" id="defend-btn" class="splash-btn">START GAME ▸</button>
@@ -88,7 +98,7 @@
 
   const $ = id => root.querySelector('#' + id);
   const sayLine = root.querySelector('#lesson-say .line');
-  const sayHint = root.querySelector('#lesson-say .hint');
+  const nextBtn = $('lesson-next');
   const stage = $('lesson-stage');
   const E = {
     refs: $('ls-refs'), arc: $('ls-arc'), corner: $('ls-corner'),
@@ -154,15 +164,32 @@
     SFX.pop();
   }
 
-  /* yellow callout: arrow from (fx,fy) to (tx,ty) plus text near the tail */
+  /* yellow callout: a gently bowed arrow from (fx,fy) to (tx,ty) with the
+     label near the tail — the curve keeps it from reading as a bare line */
   function callout(fx, fy, tx, ty, text, txAnchor = 'start') {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.innerHTML = `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="#ffd75e"
-        stroke-width="5" marker-end="url(#lm-y)"/>
-      <text x="${fx + (txAnchor === 'start' ? 14 : -14)}" y="${fy + 10}"
+    const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+    const dx = tx - fx, dy = ty - fy;
+    g.innerHTML = `<path d="M ${fx} ${fy} Q ${mx + dy * 0.22} ${my - dx * 0.22} ${tx} ${ty}"
+        fill="none" class="ls-callout-arrow" marker-end="url(#lm-y)"/>
+      <text x="${fx + (txAnchor === 'start' ? 16 : -16)}" y="${fy + 12}"
         text-anchor="${txAnchor === 'start' ? 'start' : 'end'}" class="ls-callout">${text}</text>`;
     E.annot.appendChild(g);
     SFX.pop();
+  }
+
+  /* curved dotted leader (drop zone → the feature it names) */
+  function leader(fx, fy, tx, ty, key, tint = 'gold') {
+    const MARKER = { gold: 'lm-y', cyan: 'lm-c', pink: 'lm-p' };
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('class', `ls-leader ls-leader--${tint}`);
+    p.setAttribute('fill', 'none');
+    p.setAttribute('marker-end', `url(#${MARKER[tint] || 'lm-y'})`);
+    const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+    const dx = tx - fx, dy = ty - fy;
+    p.setAttribute('d', `M ${fx} ${fy} Q ${mx + dy * 0.18} ${my - dx * 0.18} ${tx} ${ty}`);
+    if (key) p.dataset.for = key;
+    return p;
   }
 
   function refRay(dir) {   // dashed reference: 'up' | 'left'
@@ -221,33 +248,79 @@
   }
 
   function buildCards(defs, onPick) {
-    const cw = 470, ch = 410, xs = [110, 660], y = 105;
+    const cw = 500, ch = 430, xs = [95, 645], y = 95;
     defs.forEach((d, i) => {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       g.setAttribute('class', 'ls-card');
       g.dataset.correct = d.correct ? '1' : '0';
-      // long arms read clearly; centre sits low-left so both arms fit
-      g.innerHTML = `<rect x="${xs[i]}" y="${y}" width="${cw}" height="${ch}" rx="22"/>` +
-        miniAngle(d.deg, 62, 205, xs[i] + cw / 2 - 45, y + ch / 2 + 40);
+      // big cards, big diagrams: long arms, centre low-left so both arms fit
+      g.innerHTML = `<rect x="${xs[i]}" y="${y}" width="${cw}" height="${ch}" rx="26" fill="url(#lg-card)"/>` +
+        miniAngle(d.deg, 76, 235, xs[i] + cw / 2 - 40, y + ch / 2 + 48);
       g.addEventListener('click', e => { e.stopPropagation(); onPick(d, g); });
       E.cards.appendChild(g);
     });
   }
 
-  /* ---------- narrator + flow ---------- */
+  /* ---------- narrator + flow ----------
+     One sentence at a time: each line types out while the VoiceOver reads
+     it. When BOTH finish, the slide "settles": within a statement group it
+     auto-advances after a breath; at a group boundary (slide.pause) the
+     icon continue button appears bottom-right instead. Activities gate
+     themselves. (Statement grouping to be confirmed with Rishi.) */
   let idx = -1, active = false, onDone = null;
   let typeTimer = 0, typing = false, locked = false, currentText = '';
-  let onNarr = null;   // one-shot: fires when the current line finishes typing
+  let typeDone = false, voDone = false, narrSeq = 0, autoTimer = 0;
+  const AUTO_MS = 1500;   // breath between auto-advancing statements
+  let onNarr = null;   // one-shot: fires when the line has typed AND spoken
   function narrDone() {
     const f = onNarr;
     onNarr = null;
     if (f) f();
   }
 
+  /* both halves of the line landed — advance or offer the nav button */
+  function lineSettled(my) {
+    if (narrSeq !== my || !typeDone || !voDone || !active) return;
+    sayBox.classList.remove('speaking');
+    narrDone();
+    slideSettled();
+  }
+
+  function slideSettled() {
+    if (!active || locked) return;
+    const s = SLIDES[idx];
+    if (s.pause) showNext();
+    else autoTimer = setTimeout(() => { if (active && !locked) next(); }, AUTO_MS);
+  }
+
+  /* icon continue button, bottom-right */
+  let nextFn = null;
+  function showNext(fn) {
+    nextFn = fn || next;
+    if (nextBtn.hidden) { nextBtn.hidden = false; SFX.pop(); }
+  }
+  function hideNext() { nextBtn.hidden = true; nextFn = null; }
+  nextBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const f = nextFn || next;
+    hideNext();
+    SFX.tap();
+    f();
+  });
+
   function narrate(text) {
     currentText = text;
     clearInterval(typeTimer);
     typing = true;
+    typeDone = false;
+    voDone = false;
+    const my = ++narrSeq;
+    sayBox.classList.add('speaking');
+    VO.say(text, () => {
+      if (narrSeq !== my) return;
+      voDone = true;
+      lineSettled(my);
+    });
     // size the panel to the finished line up front, so the glass frame fits
     // the text and doesn't jitter wider while the typewriter runs. Prefer a
     // single line: if it only just misses, step the type down a touch (max
@@ -271,7 +344,12 @@
     let i = 0;
     typeTimer = setInterval(() => {
       sayLine.textContent = text.slice(0, ++i);
-      if (i >= text.length) { clearInterval(typeTimer); typing = false; narrDone(); }
+      if (i >= text.length) {
+        clearInterval(typeTimer);
+        typing = false;
+        typeDone = true;
+        lineSettled(my);
+      }
     }, 22);
   }
 
@@ -451,7 +529,7 @@
           narrate(fb.right);
           dragCfg = null; stage.classList.remove('draggable');
           actions.innerHTML = '';
-          setTimeout(next, 2100);
+          setTimeout(next, 2600);
         } else {
           SFX.alert();
           tries++;
@@ -462,23 +540,24 @@
     };
   }
 
+  /* feedback lines — short, clear, crisp */
   const FB = {
     acute: {
-      right: 'That’s right! This angle is smaller than a right angle, so it is an acute angle.',
-      w1: 'Not quite. Compare this angle with a right angle. Is it smaller or larger?',
-      w2: 'Look closely — an acute angle has a smaller turn than the right angle. Bring the ray below the dashed guide.',
+      right: 'Correct! Smaller than a right angle — an acute angle.',
+      w1: 'Compare it with a right angle. Smaller or larger?',
+      w2: 'Bring the ray below the dashed guide to make it acute.',
       showRef: ['up']
     },
     obtuse: {
-      right: 'Excellent! Larger than a right angle but smaller than a straight angle — that’s an obtuse angle.',
-      w1: 'Not quite. Think about where an obtuse angle lies — between a right angle and a straight angle.',
-      w2: 'An obtuse angle must go past the right angle, but stop before the straight angle. Move your ray between the two guides.',
+      right: 'Excellent! That’s an obtuse angle.',
+      w1: 'An obtuse angle lies between a right angle and a straight angle.',
+      w2: 'Move the ray between the two dashed guides.',
       showRef: ['up', 'left']
     },
     right: {
-      right: 'Perfect! A square corner — that’s a right angle.',
-      w1: 'Not quite. A right angle makes a square corner — exactly half of a straight angle.',
-      w2: 'Line your ray up with the dashed guide to make a square corner.',
+      right: 'Perfect! A square corner — a right angle.',
+      w1: 'A right angle makes a square corner.',
+      w2: 'Line the ray up with the dashed guide.',
       showRef: ['up']
     }
   };
@@ -527,7 +606,7 @@
           setTimeout(() => {           // card has landed — free to continue
             if (!active) return;
             locked = false;
-            sayHint.style.visibility = '';
+            slideSettled();
           }, 1250);
         }, 800);
       }
@@ -544,7 +623,9 @@
     earnChip(chip);
   }
 
-  /* a two-card comparison question */
+  /* a two-card comparison question. On a wrong pick, the arcs — the part
+     that shows how far each arm has turned — flash on both cards while the
+     VoiceOver reads the hint, so the student sees WHAT to compare. */
   function pickCardActivity(defs, praise, retry) {
     return function () {
       locked = true;
@@ -555,79 +636,142 @@
           SFX.good();
           g.classList.add('right');
           narrate(praise);
-          setTimeout(next, 1800);
+          setTimeout(next, 2600);
         } else {
           SFX.alert();
           g.classList.add('wrong');
           narrate(retry);
-          setTimeout(() => g.classList.remove('wrong'), 700);
+          E.cards.querySelectorAll('.ls-mini-arc').forEach(a => a.classList.add('flash'));
+          setTimeout(() => {
+            g.classList.remove('wrong');
+            E.cards.querySelectorAll('.ls-mini-arc').forEach(a => a.classList.remove('flash'));
+          }, 1700);
         }
       });
     };
   }
 
   /* ---------- the lesson ---------- */
+  /* One sentence per slide. `pause: true` marks a statement-group boundary:
+     the icon continue button appears there instead of auto-advancing.
+     (Grouping to be confirmed with Rishi.) */
   const SLIDES = [
     { text: 'Let’s start with a point.',
       go() { scene({ ray1: false, label: 'Point', labelX: P.x - 40, labelY: P.y + 100 }); } },
 
-    { text: 'Now, let’s draw a ray starting from this point.',
+    { text: 'Now, let’s draw a ray from this point.',
       go() { scene({ ray1: false }); growRay(E.ray1, 0); } },
 
-    { text: 'Now, let’s draw another ray from the same point.',
+    { text: 'Let’s draw another ray from the same point.',
       go() { scene({}); growRay(E.ray2, 60); } },
 
-    { text: 'The space formed between these two rays is called an angle.',
+    { text: 'The space between the two rays is called an angle.', pause: true,
       go() { scene({ ray2: 60 }); sweepArc(60); setTimeout(() => setLabel('Angle'), 620); } },
 
-    { text: 'The two rays that form the angle are called its arms.',
+    { text: 'The two rays are called the arms of the angle.',
       go() {
         scene({ ray2: 60, arc: 60 });
         callout(px(60, 285) + 165, py(60, 285) - 45, px(60, 240), py(60, 240), 'Arms');
         callout(px(0, 285) + 65, py(0, 285) - 65, px(0, 250), py(0, 250) - 6, 'Arms');
       } },
 
-    { text: 'The common point where the two rays begin is called the vertex.',
+    { text: 'The point where the two rays meet is called the vertex.',
       go() {
         scene({ ray2: 60, arc: 60 });
         callout(P.x - 190, P.y + 130, P.x - 16, P.y + 12, 'Vertex', 'end');
       } },
 
     /* drag the labels — check-for-understanding. The figure stays centred;
-       the labels sit in a floating dock on the left of the board */
-    { text: 'Drag the labels to their correct place.',
+       the label chips dock on the left, the drop capsules line up in a
+       column on the right, each tied to its feature by a curved leader.
+       A looping hand animation acts out the first drag — no "DRAG THESE"
+       text needed. */
+    { text: 'Drag each label to its place.',
       go() {
         locked = true;
         taskMode();
         scene({ ray2: 60, arc: 60 });
+        const KEYS = ['Vertex', 'Arms', 'Angle'];
         const done = new Set();
         const dock = document.createElement('div');
         dock.id = 'drag-dock';
-        dock.innerHTML = '<h4>DRAG THESE</h4>';
         zones.appendChild(dock);
+
+        /* celebratory sparkle ring when a label lands in its home */
+        function celebrate(z) {
+          const zr = z.getBoundingClientRect(), br = zones.getBoundingClientRect();
+          for (let i = 0; i < 7; i++) {
+            const s = document.createElement('span');
+            s.className = 'zone-spark';
+            const dir = (i / 7) * Math.PI * 2;
+            s.style.left = (zr.left + zr.width / 2 - br.left) + 'px';
+            s.style.top = (zr.top + zr.height / 2 - br.top) + 'px';
+            s.style.setProperty('--dx', Math.cos(dir) * 66 + 'px');
+            s.style.setProperty('--dy', Math.sin(dir) * 54 + 'px');
+            zones.appendChild(s);
+            s.addEventListener('animationend', () => s.remove());
+          }
+          SFX.good();
+        }
+
+        /* the demo hand acts out one full drag, dock → first capsule,
+           looping until the student grabs a chip themselves */
+        function demoHand() {
+          const c0 = dock.querySelector('.lesson-drag');
+          // act out the drag on the first chip's OWN capsule, so the
+          // demonstrated gesture is also a true one
+          const z0 = c0 && (zones.querySelector(`.lesson-zone[data-key="${c0.dataset.key}"]`)
+                     || zones.querySelector('.lesson-zone'));
+          if (!c0 || !z0) return;
+          const br = zones.getBoundingClientRect();
+          const a = c0.getBoundingClientRect(), b = z0.getBoundingClientRect();
+          const h = document.createElement('div');
+          h.className = 'lesson-hand demo';
+          h.textContent = '👆';
+          h.style.left = (a.left + a.width / 2 - br.left) + 'px';
+          h.style.top = (a.top + a.height / 2 - br.top) + 'px';
+          zones.appendChild(h);
+          const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+          const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+          h.animate([
+            { transform: 'translate(-30%, -10%) scale(1)', opacity: 0, offset: 0 },
+            { transform: 'translate(-30%, -10%) scale(1)', opacity: 1, offset: 0.12 },
+            { transform: 'translate(-30%, -10%) scale(0.82)', opacity: 1, offset: 0.22 },
+            { transform: `translate(calc(-30% + ${dx}px), calc(-10% + ${dy}px)) scale(0.82)`, opacity: 1, offset: 0.72 },
+            { transform: `translate(calc(-30% + ${dx}px), calc(-10% + ${dy}px)) scale(1)`, opacity: 1, offset: 0.84 },
+            { transform: `translate(calc(-30% + ${dx}px), calc(-10% + ${dy}px)) scale(1)`, opacity: 0, offset: 1 }
+          ], { duration: 2800, iterations: Infinity, easing: 'ease-in-out' });
+        }
+
         // zones anchor to real stage geometry once layout has settled, and
-        // mirror the drag chips' exact size so labels visibly fit
+        // mirror the drag chips' exact size so labels visibly fit.
+        // Each capsule sits NEXT TO the feature it names — Angle upper-left,
+        // Arms upper-right, Vertex below the point — so every leader is
+        // short and none of them cross: the screen reads like a labelled
+        // diagram, not a wiring loom.
         requestAnimationFrame(() => {
           const chip = dock.querySelector('.lesson-drag');
           const cr = chip ? chip.getBoundingClientRect() : null;
-          // each drop spot: zone centre, plus dotted leader arrow(s) — Arms
-          // gets one leader per arm, so a single zone visibly names both.
-          // The Arms zone sits well clear to the right of both rays.
-          const armsX = px(60, 285) + 340, armsY = py(60, 285) - 40;
+          // each slot + its arrow share a hue (gold = angle, cyan = arms,
+          // pink = vertex) so slot↔feature pairs read at a glance; the drag
+          // chips stay neutral so the colours never give the answer away
           const SPOTS = [
-            { key: 'Vertex', x: P.x - 30, y: P.y + 168,
-              leads: [[P.x - 58, P.y + 124, P.x - 12, P.y + 26]] },
-            { key: 'Arms', x: armsX, y: armsY,
-              leads: [
-                [armsX - 95, armsY + 55, px(60, 190) + 18, py(60, 190) + 4],   // → upper arm
-                [armsX - 40, armsY + 78, px(0, 230) + 10, py(0, 230) - 8]      // → lower arm
+            { key: 'Angle', tint: 'gold', x: 320, y: 165, leads: [
+                [430, 200, 648, 370]        // → lands square on the arc's midpoint
+              ] },
+            { key: 'Arms', tint: 'cyan', x: 1005, y: 165, leads: [
+                [905, 190, px(60, 205) + 26, py(60, 205) - 4],        // → upper arm
+                [918, 210, px(0, 255) + 6, py(0, 255) - 16]           // → lower arm
+              ] },
+            { key: 'Vertex', tint: 'pink', x: 760, y: 565, leads: [
+                [700, 545, P.x + 22, P.y + 20]                        // → the point
               ] }
           ];
           SPOTS.forEach(t => {
             const z = document.createElement('div');
-            z.className = 'lesson-zone';
+            z.className = `lesson-zone tint-${t.tint}`;
             z.dataset.key = t.key;
-            z.textContent = 'DROP HERE';
+            z.textContent = '?';
             const pos = stagePosPct(t.x, t.y);
             z.style.left = pos.left + '%';
             z.style.top = pos.top + '%';
@@ -636,30 +780,29 @@
               z.style.height = cr.height + 'px';
             }
             zones.appendChild(z);
-            t.leads.forEach(ld => {
-              const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-              l.setAttribute('class', 'ls-leader');
-              l.setAttribute('marker-end', 'url(#lm-y)');
-              attr(l, { x1: ld[0], y1: ld[1], x2: ld[2], y2: ld[3] });
-              l.dataset.for = t.key;
-              E.annot.appendChild(l);
-            });
+            t.leads.forEach(ld => E.annot.appendChild(leader(ld[0], ld[1], ld[2], ld[3], t.key, t.tint)));
           });
+          demoHand();
         });
-        ['Vertex', 'Arms'].forEach(k => {
+
+        KEYS.forEach(k => {
           const c = document.createElement('button');
           c.type = 'button';
           c.className = 'lesson-drag';
           c.dataset.key = k;
           c.textContent = k;
           dock.appendChild(c);
-          let sx, sy;
+          let sx, sy, dx = 0, dy = 0, busy = false;
           c.addEventListener('pointerdown', ev => {
+            if (busy) return;
             ev.preventDefault();
+            hideHand();
             c.setPointerCapture(ev.pointerId);
             sx = ev.clientX; sy = ev.clientY;
-            const move = e2 =>
-              c.style.transform = `translate(${e2.clientX - sx}px, ${e2.clientY - sy}px)`;
+            const move = e2 => {
+              dx = e2.clientX - sx; dy = e2.clientY - sy;
+              c.style.transform = `translate(${dx}px, ${dy}px)`;
+            };
             const up = () => {
               c.removeEventListener('pointermove', move);
               c.removeEventListener('pointerup', up);
@@ -670,7 +813,6 @@
                             cr.top < zr.bottom && cr.bottom > zr.top;
                 if (!hit || z.classList.contains('filled')) continue;
                 if (z.dataset.key === c.dataset.key) {
-                  SFX.good();
                   z.classList.add('filled');
                   z.textContent = c.dataset.key;
                   // leaders stay put once correct — just settle from a
@@ -680,12 +822,26 @@
                       x.classList.add('done');
                       x.setAttribute('marker-end', 'url(#lm-g)');
                     });
+                  celebrate(z);
                   c.remove();
                   done.add(k);
-                  if (done.size === 2) { narrate('Great! That’s the vertex and the arms.'); setTimeout(next, 1600); }
+                  if (done.size === KEYS.length) {
+                    narrate('Perfect! Vertex, arms — and the angle between them.');
+                    setTimeout(next, 2600);
+                  }
                 } else {
+                  // wrong home: the drop lands, shakes its head, walks back
                   SFX.alert();
-                  c.style.transform = '';
+                  busy = true;
+                  c.style.setProperty('--dx', dx + 'px');
+                  c.style.setProperty('--dy', dy + 'px');
+                  c.classList.add('shake');
+                  setTimeout(() => {
+                    c.classList.remove('shake');
+                    c.style.transition = 'transform 0.45s cubic-bezier(0.3, 0.8, 0.4, 1)';
+                    c.style.transform = '';
+                    setTimeout(() => { c.style.transition = ''; busy = false; }, 480);
+                  }, 480);
                 }
                 return;
               }
@@ -697,17 +853,12 @@
         });
       } },
 
-    { text: 'So, an angle has two arms and a vertex.',
+    { text: 'Angles can be different sizes.',
+      go() { scene({ ray2: 60, arc: 60, label: 'Angle' }); } },
+
+    { text: 'The angle grows as one arm turns away from the other.',
       go() {
         scene({ ray2: 60, arc: 60 });
-        callout(px(60, 285) + 165, py(60, 285) - 45, px(60, 240), py(60, 240), 'Arms');
-        callout(px(0, 285) + 65, py(0, 285) - 65, px(0, 250), py(0, 250) - 6, 'Arms');
-        callout(P.x - 190, P.y + 130, P.x - 16, P.y + 12, 'Vertex', 'end');
-      } },
-
-    { text: 'Angles can be different sizes. The size of an angle depends on how far one arm turns away from the other.',
-      go() {
-        scene({ ray2: 60, arc: 60, label: 'Angle' });
         // the arm demonstrates on its own: swing wider, then narrower, settle
         const swing = (a, b, dur, next) =>
           animate(dur, k => liveAngle(a + (b - a) * k), next);
@@ -718,7 +869,7 @@
         }, 600);
       } },
 
-    { text: 'The more the ray turns, the larger the angle becomes. Turn it all the way around!',
+    { text: 'Turn the ray all the way around!',
       go() {
         locked = true;
         taskMode();
@@ -726,17 +877,17 @@
         // free spin: the student can take the arm through a full 360°
         enableDrag(60, d => liveAngle(Math.min(Math.max(d, 1), 359.9)), { full: true });
         showHand(60);
-        button('Next', '', () => {
+        showNext(() => {
           dragCfg = null; stage.classList.remove('draggable');
-          SFX.tap(); next();
+          next();
         });
       } },
 
-    { text: 'Which angle is larger? Tap it.',
+    { text: 'Tap the larger angle.',
       go: pickCardActivity(
         [{ deg: 45 }, { deg: 135, correct: true }],
-        'That’s right! The more the arm turns, the larger the angle.',
-        'Try again — look at how far the arm has turned in each one.') },
+        'Right! A bigger turn makes a bigger angle.',
+        'Look at the turn between the arms. Try again!') },
 
     { text: 'When an arm makes a complete turn around the vertex, it is called a complete angle.',
       // 359.9° (not a bare 360) keeps the arc's large-arc sweep well-defined
@@ -772,7 +923,7 @@
       chips: ['complete', 'straight'],
       go: angleReveal(90, 'Right Angle', 'right', { from: 180, corner: true }) },
 
-    { text: 'It looks like the corner of a square.',
+    { text: 'It looks like the corner of a square.', pause: true,
       chips: ['complete', 'straight', 'right'],
       go() { scene({ ray2: 90, corner: true, label: 'Right Angle' }); } },
 
@@ -792,7 +943,7 @@
     { text: 'Drag the ray to make an obtuse angle.',
       go: makeAngleActivity(45, [91, 179], FB.obtuse) },
 
-    { text: 'An angle that extends beyond the straight angle is called a reflex angle.',
+    { text: 'An angle that extends beyond the straight angle is called a reflex angle.', pause: true,
       chips: ['complete', 'straight', 'right', 'acute', 'obtuse'],
       // shortened arm: at 235° the full-length ray would dip past the stage
       // into the card tray below — clip it to a length that clears the tray
@@ -800,7 +951,7 @@
 
     /* recap — a live angle explorer: spin the ray a full turn, the sector
        fill sweeps with it and the type name flips as each band is entered */
-    { text: 'Let’s recap — drag the ray and watch the angle change its type!',
+    { text: 'Drag the ray and watch the angle change!',
       go() {
         locked = true;
         taskMode();
@@ -848,17 +999,17 @@
         }
         render(60);
         enableDrag(60, d => render(snap(d)), { full: true, cx: C.x, cy: C.y });
-        button('Next', '', () => {
+        showNext(() => {
           dragCfg = null; stage.classList.remove('draggable');
-          SFX.tap(); next();
+          next();
         });
       } },
 
-    { text: 'Quick check — which angle is smaller? Tap it.',
+    { text: 'Tap the smaller angle.',
       go: pickCardActivity(
         [{ deg: 45, correct: true }, { deg: 135 }],
-        'That’s right! The smaller turn makes the smaller angle.',
-        'Try again — which arm has turned less?') },
+        'Yes! A smaller turn makes a smaller angle.',
+        'Which arm has turned less? Try again!') },
 
     { text: 'Which type of angle is this?',
       go() {
@@ -871,15 +1022,15 @@
             if (name === 'Acute') {
               SFX.good();
               b.classList.add('right');
-              narrate('That’s right! This angle is smaller than a right angle, so it is an acute angle.');
+              narrate('That’s right! Smaller than a right angle — acute.');
               actions.querySelectorAll('button').forEach(x => x.disabled = true);
-              setTimeout(next, 2000);
+              setTimeout(next, 2600);
             } else {
               SFX.alert();
               b.classList.add('wrong');
               tries++;
-              if (tries === 1) { refRay('up'); narrate('Not quite. Compare this angle with a right angle — is it smaller or larger?'); }
-              else narrate('Look closely — this angle has a smaller turn than the right angle. An angle smaller than a right angle is acute.');
+              if (tries === 1) { refRay('up'); narrate('Compare it with a right angle — smaller or larger?'); }
+              else narrate('A smaller turn than a right angle means acute.');
               setTimeout(() => b.classList.remove('wrong'), 700);
             }
           });
@@ -889,11 +1040,11 @@
     { text: 'Drag the ray to make a right angle.',
       go: makeAngleActivity(40, [87, 93], FB.right) },
 
-    { text: 'Which angle is larger than a right angle but smaller than a straight angle?',
+    { text: 'Tap the obtuse angle.',
       go: pickCardActivity(
         [{ deg: 310 }, { deg: 135, correct: true }],
-        'Exactly! Larger than a right angle but smaller than a straight angle — an obtuse angle.',
-        'Not quite. This one has gone past the straight angle. Which angle stops between the right and straight angles?') },
+        'Exactly! That’s an obtuse angle.',
+        'That one goes past a straight angle. Try again!') },
 
     { text: '', final: true,
       go() {
@@ -909,31 +1060,34 @@
   /* ---------- flow ---------- */
   function next() {
     if (!active) return;
+    clearTimeout(autoTimer);
+    hideNext();
     idx++;
     if (idx >= SLIDES.length) return finish();
     locked = false;
     onNarr = null;
+    typeDone = voDone = false;
     sayBox.classList.remove('task');
     const s = SLIDES[idx];
     syncChips(s.chips);
-    sayHint.style.visibility = 'hidden';
     s.go();
     if (s.text) narrate(s.text);
-    if (!locked) sayHint.style.visibility = '';
   }
 
+  /* a tap is only ever "get on with this line": first tap completes the
+     typing, a second skips the rest of the VoiceOver. Moving between
+     statement groups is the nav button's job alone. */
   function advanceTap() {
     if (!active || idx < 0) return;
-    if (typing) {                       // first tap reveals the full line
+    if (typing) {
       clearInterval(typeTimer);
       typing = false;
       sayLine.textContent = currentText;
-      narrDone();
+      typeDone = true;
+      lineSettled(narrSeq);
       return;
     }
-    if (locked) return;
-    SFX.tap();
-    next();
+    if (window.VO && VO.speaking()) VO.skip();
   }
 
   function finish() {
@@ -941,6 +1095,8 @@
     active = false;
     cancelAnimationFrame(raf);
     clearInterval(typeTimer);
+    clearTimeout(autoTimer);
+    VO.stop();
     root.classList.add('hide');
     root.addEventListener('transitionend', () => root.remove(), { once: true });
     window.removeEventListener('keydown', onKey);
@@ -951,7 +1107,8 @@
     if (!active) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
       e.preventDefault();
-      advanceTap();
+      if (!nextBtn.hidden) nextBtn.click();
+      else advanceTap();
     }
   }
 

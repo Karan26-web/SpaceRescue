@@ -54,6 +54,7 @@
    light-blue accent bar (matches the lesson panel design) --- */
 .narrator {
   position: relative;
+  z-index: 2;   /* the card stays bright above the full-slide dim wash */
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 9px 1fr;
@@ -91,43 +92,36 @@
 .narrator .line {
   grid-column: 2;
   margin: 0;
-  min-height: 2.6em;
+  min-height: 2.4em;
   color: #1e2a66;
-  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
   font-weight: 800;
   line-height: 1.35;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
-/* the last card ends on a call-to-action instead of auto-advancing */
-#lets-learn {
-  grid-column: 2;
-  justify-self: end;
-  margin-top: 0.9em;
-  cursor: pointer;
-  padding: 0.6em 1.7em;
-  border: 3px solid #ffffff;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #57c8ff 0%, #2f7de0 100%);
-  color: #ffffff;
-  font: inherit;
-  font-size: clamp(0.95rem, 1.9vw, 1.2rem);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-shadow: 0 1px 0 rgba(20, 60, 130, 0.45);
-  box-shadow:
-    inset 0 -0.25em 0 rgba(23, 82, 160, 0.5),
-    0 8px 18px rgba(5, 8, 30, 0.35),
-    0 0 16px rgba(64, 170, 255, 0.45);
-  animation: learn-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
-  transition: transform 0.1s ease;
+/* --- VoiceOver spotlight: while a line plays, the WHOLE slide dims —
+   scene and narrator band alike — and only the element being talked
+   about (plus the narrator card) is lifted above the wash --- */
+.scene-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(4, 8, 28, 0);
+  transition: background 0.6s ease;
+  pointer-events: none;
 }
-#lets-learn:hover { transform: translateY(-2px); }
-#lets-learn:active { transform: translateY(2px); }
-#lets-learn[hidden] { display: none; }
 
-@keyframes learn-pop {
-  from { transform: scale(0.5); opacity: 0; }
+.slide.dim .scene-dim { background: rgba(4, 8, 28, 0.55); }
+
+.slide.dim .focus {
+  z-index: 2;
+  filter: drop-shadow(0 0 22px rgba(255, 214, 94, 0.75));
+}
+
+/* accent bar heartbeat while the narrator is speaking */
+.narrator.speaking::before {
+  animation: accent-speak 0.9s ease-in-out infinite;
 }
 
 /* --- hook 1: station under meteor fire --- */

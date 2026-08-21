@@ -5,14 +5,17 @@
    too long) and the meteor slams the cannon. */
 (function () {
   const QUESTIONS = [90, 120, 150, 30, 75, 110, 42, 55];
-  const APPROACH_SECS = 14;   // spawn → cannon, if the player never answers
+  const APPROACH_SECS = 18;   // spawn → cannon, if the player never answers —
+                              // generous, so there's time to read the angle
   const LIVES = 3;
 
   const game = document.getElementById('game');
   const arena = document.getElementById('arena');
   const svg = document.getElementById('angle-svg');
   const meteorEl = document.getElementById('meteor');
+  const cannonEl = document.getElementById('cannon');
   const barrel = document.getElementById('cannon-barrel');
+  const tutorialDim = document.getElementById('tutorial-dim');
   const promptEl = document.getElementById('prompt');
   const livesEl = document.getElementById('lives');
   const optionsEl = document.getElementById('options');
@@ -53,13 +56,19 @@
 
   let round = 0, lives = LIVES, hits = 0;
   let angle = 0, progress = 0, spawnR = 0, pivot = { x: 0, y: 0 }, baseHalf = 120, domeR = 110;
-  let phase = 'idle';           // idle | flying | resolving | over
+  let phase = 'idle';           // idle | tutorial | flying | resolving | over
   let lastT = 0, raf = 0;
+  let approachLine = null;      // dotted tether pivot → asteroid, live-updated
 
   const rad = d => d * Math.PI / 180;
   const classify = a =>
     a < 90 ? 'an acute angle' : a === 90 ? 'a right angle'
     : a < 180 ? 'an obtuse angle' : 'a straight angle';
+
+  /* ---------- VoiceOver: shared engine (js/vo.js) ---------- */
+  const voice = (text, done) =>
+    window.VO ? VO.say(text, done) : (done && setTimeout(done, 1800));
+  const hushVoice = () => { if (window.VO) VO.stop(); };
 
   /* ---------- layout ---------- */
 
@@ -85,7 +94,7 @@
     if (dx > 1e-6) t = Math.min(t, (a.width - pivot.x) / dx);
     if (dx < -1e-6) t = Math.min(t, -pivot.x / dx);
     if (dy < -1e-6) t = Math.min(t, -pivot.y / dy);
-    spawnR = (Number.isFinite(t) ? t : Math.max(a.width, a.height)) + 150;
+    spawnR = (Number.isFinite(t) ? t : Math.max(a.width, a.height)) + 240;
   }
 
   function meteorPos() {
@@ -93,22 +102,19 @@
     return { x: pivot.x + Math.cos(rad(angle)) * r, y: pivot.y - Math.sin(rad(angle)) * r };
   }
 
-  /* solid horizon baseline through the pivot (the 0° reference the angle
-     is read against), dashed approach ray, and the arc between them */
-  function drawRays() {
+  /* solid horizon baseline through the pivot (the 0° reference the angle is
+     read against — and the cannon's resting direction), plus, once a meteor
+     is inbound, the dotted tether pivot → asteroid and the arc between the
+     horizontal and that tether. The tether's far end is re-pinned to the
+     asteroid every frame (renderMeteor), so it visibly shortens as the rock
+     closes in. */
+  function drawRays(withApproach = true) {
     const W = arena.clientWidth;
-    const L = spawnR;
-    const ex = pivot.x + Math.cos(rad(angle)) * L;
-    const ey = pivot.y - Math.sin(rad(angle)) * L;
-    const R = baseHalf * 1.2;   // arc sits just outside the dome
-    const ax = pivot.x + Math.cos(rad(angle)) * R;
-    const ay = pivot.y - Math.sin(rad(angle)) * R;
-    const largeArc = angle > 180 ? 1 : 0;
     // the true pivot now sits almost exactly on the arena's bottom edge
     // (Camnono.png's dome is cropped flush, unlike the old padded art) —
     // clamp only enough to keep the halo's glow from clipping at the edge
     const hy = Math.min(pivot.y, arena.clientHeight - 5);
-    svg.innerHTML =
+    let html =
       `<line x1="0" y1="${hy}" x2="${W}" y2="${hy}"
              stroke="rgba(10, 16, 56, 0.55)" stroke-width="9"/>
        <line x1="0" y1="${hy}" x2="${W}" y2="${hy}"
@@ -116,15 +122,46 @@
              style="filter: drop-shadow(0 0 6px rgba(150,190,255,0.8))"/>
        <text x="${W - 14}" y="${hy - 12}" text-anchor="end" fill="#f4f6ff"
              font-size="20" font-weight="800"
-             style="paint-order: stroke; stroke: rgba(10,16,56,0.7); stroke-width: 4px">0°</text>
-       <line x1="${pivot.x}" y1="${pivot.y}" x2="${ex}" y2="${ey}"
-             stroke="#7ef06e" stroke-width="3" stroke-dasharray="10 9" opacity="0.85"/>
-       <path d="M ${pivot.x + R} ${pivot.y} A ${R} ${R} 0 ${largeArc} 0 ${ax} ${ay}"
-             fill="none" stroke="#ffd45e" stroke-width="3.5" opacity="0.95"/>`;
+             style="paint-order: stroke; stroke: rgba(10,16,56,0.7); stroke-width: 4px">0°</text>`;
+    if (withApproach) {
+      const p = meteorPos();
+      const R = baseHalf * 1.2;   // arc sits just outside the dome
+      const ax = pivot.x + Math.cos(rad(angle)) * R;
+      const ay = pivot.y - Math.sin(rad(angle)) * R;
+      const largeArc = angle > 180 ? 1 : 0;
+      html +=
+        `<line id="approach-line" x1="${pivot.x}" y1="${pivot.y}" x2="${p.x}" y2="${p.y}"
+               stroke="#7ef06e" stroke-width="3" stroke-dasharray="10 9" opacity="0.85"/>
+         <path id="angle-arc" d="M ${pivot.x + R} ${pivot.y} A ${R} ${R} 0 ${largeArc} 0 ${ax} ${ay}"
+               fill="none" stroke="#ffd45e" stroke-width="3.5" opacity="0.95"/>`;
+    }
+    svg.innerHTML = html;
+    approachLine = withApproach ? svg.querySelector('#approach-line') : null;
+  }
+
+  /* targeted feedback: pulse the angle the round was about and name its
+     type right beside the arc, so the words and the picture connect */
+  function highlightAngle() {
+    const arc = svg.querySelector('#angle-arc');
+    if (arc) arc.classList.add('highlight');
+    if (approachLine) approachLine.classList.add('highlight');
+    const mid = angle / 2, R = baseHalf * 1.65;
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', pivot.x + Math.cos(rad(mid)) * R);
+    t.setAttribute('y', Math.max(30, pivot.y - Math.sin(rad(mid)) * R));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('class', 'angle-callout');
+    t.textContent = typeOf(angle).name;
+    svg.appendChild(t);
   }
 
   function renderMeteor() {
     const p = meteorPos();
+    // keep the dotted tether pinned to the asteroid — it shrinks as it nears
+    if (approachLine) {
+      approachLine.setAttribute('x2', p.x);
+      approachLine.setAttribute('y2', p.y);
+    }
     const travel = Math.atan2(Math.sin(rad(angle)), -Math.cos(rad(angle)));
     const rot = travel * 180 / Math.PI - art.face;
     meteorEl.style.transform =
@@ -170,6 +207,43 @@
     }
   }
 
+  /* ---------- tutorial: VoiceOver + spotlight, once per session ----------
+     The whole environment is shown first, then the objective is spoken.
+     While the cannon is being talked about the rest of the screen dims and
+     the cannon comes into focus; same for the angle options. */
+  function spotlight(el) {
+    document.querySelectorAll('#game .spot').forEach(x => x.classList.remove('spot'));
+    tutorialDim.classList.toggle('on', !!el);
+    if (el) el.classList.add('spot');
+  }
+
+  function runTutorial(done) {
+    phase = 'tutorial';
+    angle = 0;
+    buildOptions();          // the answer pad is part of the environment tour
+    computePivot();
+    drawRays(false);         // horizon only — no meteor inbound yet
+    barrel.style.transform = 'translateX(-50%) rotate(90deg)';   // resting horizontal
+    meteorEl.style.visibility = 'hidden';
+    const steps = [
+      { text: 'Asteroids are coming!', spot: null },
+      { text: 'Use the cannon to defend your planet.', spot: cannonEl },
+      { text: 'Select a suitable angle to position the cannon.', spot: optionsEl }
+    ];
+    let i = 0;
+    (function step() {
+      if (i >= steps.length) {
+        spotlight(null);
+        setTimeout(done, 500);   // let the dim fade out before play begins
+        return;
+      }
+      const s = steps[i++];
+      spotlight(s.spot);
+      setPrompt(s.text);
+      voice(s.text, () => setTimeout(step, 450));
+    })();
+  }
+
   function startRound() {
     angle = QUESTIONS[round];
     progress = 0;
@@ -177,7 +251,9 @@
     buildOptions();   // fill the answer bar FIRST — it changes the arena's
     computePivot();   // height, and all geometry below measures the arena
     drawRays();
-    barrel.style.transform = 'translateX(-50%) rotate(0deg)';
+    // the cannon rests horizontal, pointing right along the 0° baseline —
+    // the angle to read is formed against this position
+    barrel.style.transform = 'translateX(-50%) rotate(90deg)';
     meteorEl.src = art.src;
     meteorEl.style.width = art.width;
     meteorEl.style.transformOrigin = `${art.ox}% ${art.oy}%`;
@@ -218,7 +294,11 @@
       shootBolt(aimDeg, target, correct ? 240 : 430, () => {
         if (correct) return explodeMeteor(target);
         SFX.alert();                   // you were wrong, and it's still coming
-        setPrompt('Missed! That’s not its angle type — brace for impact!', 'bad');
+        // targeted feedback: light up the real angle and name its type
+        highlightAngle();
+        const picked = (/^[aeiou]/i.test(t.name) ? 'an ' : 'a ') + t.name.toLowerCase();
+        setPrompt(`Missed! This is ${classify(angle)}, not ${picked} — brace for impact!`, 'bad');
+        voice(`This is ${classify(angle)}.`);
         phase = 'rushing';
       });
     }, 340);
@@ -278,11 +358,16 @@
     if (window.FireFX) FireFX.burst(at.x, at.y, 1);
     spawnBurst(at, { sparks: 12 });
     hits++;
-    setPrompt(`Direct hit! ${angle}° — ${classify(angle)}. Nice reading, pilot!`, 'good');
-    setTimeout(nextRound, 1600);
+    // targeted feedback: the angle just solved pulses while its type is named
+    highlightAngle();
+    setPrompt(`Direct hit! This is ${classify(angle)} (${angle}°). Nice reading, pilot!`, 'good');
+    voice(`This is ${classify(angle)}.`);
+    setTimeout(nextRound, 2000);
   }
 
-  /* wrong / too late: the meteor accelerates in and slams the cannon */
+  /* wrong / too late: the meteor accelerates in and slams the cannon.
+     The cannon is destroyed — chars and sinks — then a fresh one rides up
+     from the bottom of the screen into position: one life spent, visibly. */
   function impact() {
     phase = 'resolving';
     const at = meteorPos();          // blow up right where it struck
@@ -296,9 +381,35 @@
     lives--;
     renderLives();
     SFX.lifeLost(lives);             // heartbeat under the impact tail
-    setPrompt(`Ouch! It came in at ${angle}° — ${classify(angle)}. Shields down!`, 'bad');
+    // targeted feedback (skip re-highlighting if the missed shot already did)
+    if (!svg.querySelector('.angle-callout')) {
+      highlightAngle();
+      voice(`This is ${classify(angle)}.`);
+    }
+    setPrompt(`Ouch! This is ${classify(angle)} (${angle}°). Cannon destroyed — shields down!`, 'bad');
     lockOptions(null, true);
-    setTimeout(nextRound, 1900);
+    // the wreck goes down under the explosion…
+    setTimeout(() => cannonEl.classList.add('destroyed'), 150);
+    // …and once the dust settles, a new cannon (if any lives remain)
+    setTimeout(() => {
+      if (lives <= 0) return endRun(false);
+      round++;
+      if (round >= QUESTIONS.length) return endRun(true);
+      respawnCannon(startRound);
+    }, 2300);
+  }
+
+  /* replacement cannon: transitions in from below the screen, barrel back
+     in its original horizontal position, then the next round begins */
+  function respawnCannon(done) {
+    cannonEl.classList.remove('destroyed');
+    barrel.style.transform = 'translateX(-50%) rotate(90deg)';
+    cannonEl.classList.add('respawn');
+    SFX.swoosh();
+    setTimeout(() => {
+      cannonEl.classList.remove('respawn');
+      done();
+    }, 950);   // matches the cannon-respawn animation, so measuring is safe
   }
 
   function nextRound() {
@@ -310,8 +421,10 @@
 
   function endRun(won) {
     phase = 'over';
+    hushVoice();
     meteorEl.style.visibility = 'hidden';
     svg.innerHTML = '';
+    approachLine = null;
     optionsEl.innerHTML = '';
     SFX.approachStop();
     SFX.fanfare(won);
@@ -329,6 +442,7 @@
     round = 0; lives = LIVES; hits = 0;
     renderLives();
     result.classList.add('hide');
+    cannonEl.classList.remove('destroyed', 'respawn');   // fresh cannon
     startRound();
   }
 
@@ -360,6 +474,7 @@
   window.addEventListener('resize', () => {
     if (phase === 'over' || phase === 'idle') return;
     computePivot();
+    if (phase === 'tutorial') return drawRays(false);   // horizon only
     drawRays();
     renderMeteor();
   });
@@ -372,9 +487,10 @@
   window.AngleGame = {
     start() {
       renderLives();
-      startRound();
       lastT = performance.now();
       raf = requestAnimationFrame(tick);
+      // environment tour + spoken objective first, then the mission begins
+      runTutorial(startRound);
     }
   };
 })();
